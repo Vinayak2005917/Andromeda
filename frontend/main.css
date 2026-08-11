@@ -1,5 +1,10 @@
 * {
     box-sizing: border-box;
+    scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+    display: none;
 }
 
 body {
@@ -27,6 +32,75 @@ body {
     z-index: 1;
     scrollbar-width: thin;
     scrollbar-color: #424242 transparent;
+}
+
+.tool-run {
+    align-self: center;
+    width: min(75%, 620px);
+    max-width: 100%;
+    margin-top: -10px;
+    color: #8d8d8d;
+    font-size: 12px;
+}
+
+.tool-run summary {
+    width: fit-content;
+    cursor: pointer;
+    list-style-position: inside;
+    user-select: none;
+    font-size: 13px;
+}
+
+.tool-run summary::marker {
+    color: #777777;
+}
+
+.tool-count {
+    color: #666666;
+}
+
+.tool-log {
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 7px;
+    padding-left: 18px;
+    scrollbar-width: thin;
+    scrollbar-color: #454545 transparent;
+}
+
+.tool-empty {
+    padding: 4px 0 8px;
+    color: #777777;
+    line-height: 1.45;
+}
+
+.tool-entry {
+    padding: 5px 0 8px;
+}
+
+.tool-entry-meta {
+    margin-bottom: 3px;
+    color: #858585;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 11px;
+}
+
+.tool-entry-content {
+    display: -webkit-box;
+    overflow: hidden;
+    color: #999999;
+    font-size: 12px;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+}
+
+/* Keep tool calls visually lightweight and part of the chat flow. */
+.tool-run,
+.tool-log,
+.tool-entry {
+    background: transparent;
+    border: 0;
 }
 
 #idle-state {
@@ -118,6 +192,24 @@ body.has-messages #idle-state {
     padding: 0;
 }
 
+.connection-indicator {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 12px);
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #e05252;
+    transform: translateY(-50%);
+    box-shadow: 0 0 0 3px rgba(224, 82, 82, 0.12);
+    transition: background 180ms ease, box-shadow 180ms ease;
+}
+
+.connection-indicator.connected {
+    background: #55bd72;
+    box-shadow: 0 0 0 3px rgba(85, 189, 114, 0.12);
+}
+
 #input-shell {
     display: flex;
     align-items: center;
@@ -192,4 +284,5 @@ button:disabled {
     #chat { padding: 24px 16px 120px; }
     .message { max-width: 88%; }
     #input-area { bottom: 14px; width: calc(100% - 22px); }
+    .connection-indicator { left: auto; right: 13px; top: -13px; }
 }

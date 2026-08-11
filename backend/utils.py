@@ -14,4 +14,4 @@ def debug_print(contents):
     
     now = datetime.now()
     date_time_info = now.strftime("%H:%M:%S.%f")[:-3]
-    print(f"\n[{date_time_info}] [{file_name}] DEBUG: {contents}")
+    print(f"\n[{date_time_info}] [{file_name}] [{function_name}] DEBUG: {contents}")

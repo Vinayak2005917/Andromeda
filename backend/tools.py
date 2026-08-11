@@ -7,6 +7,7 @@ from langchain.tools import tool
 now = datetime.now()
 from utils import *
 from ddgs import DDGS
+from websocket import send_tool_update
 date_time_info = now.strftime("%H:%M:%S on %Y-%m-%d")
 from dotenv import load_dotenv
 load_dotenv()
@@ -26,6 +27,7 @@ def check_date_time():
 def read_directory(reason: str):
     directory_path = "./memory"
     debug_print(f"Reading directory")
+    send_tool_update(f"Reading directory for reason: {reason}")
     output = []
     try:
         for item in sorted(os.listdir(directory_path)):
@@ -40,24 +42,30 @@ def read_directory(reason: str):
                 }
             )
         output = "\n".join(str(item) for item in output)
+        send_tool_update(f"Done reading directory")
         return output
     except Exception as e:
         debug_print(f"Error reading directory {directory_path}: {e}")
+        send_tool_update(f"Error reading directory {directory_path}: {e}")
         return str(e)
 
 @tool("Read_file",description="Read the contents of a file.")
 def read_file(file_name: str):
     file_path = "./memory/" + file_name
     debug_print(f"Reading file {file_path}")
+    send_tool_update(f"Reading file {file_path}")
 
     try:
         if not os.path.exists(file_path):
             debug_print(f"File {file_path} does not exist.")
+            send_tool_update(f"File {file_name} does not exist.")
             return "File does not exist."
         with open(file_path, "r", encoding="utf-8") as f:
             return f.read()
+        send_tool_update(f"Done reading file {file_name}")
     except Exception as e:
         debug_print(f"Error reading file {file_path}: {e}")
+        send_tool_update(f"Error reading file {file_path}: {e}")
         return str(e)
 
 @tool("write_to_file", description="Append content to an existing file.")
@@ -66,13 +74,16 @@ def write_to_file(file_name: str, content: str) -> str:
     if not os.path.exists(file_path):
         return "File does not exist."
     debug_print(f"Appending to {file_path}")
+    send_tool_update(f"Appending to {file_name}, content: {content[:50]}...")
     try:
         with open(file_path, "a", encoding="utf-8") as f:
-            f.write(content)
+            f.write("\n"+content+"\n")
         debug_print(f"Appended content to {file_path}")
+        send_tool_update(f"Appended to file {file_name}, content: {content[:50]}...")
         return f"Updated '{file_name}'."
     except Exception as e:
         debug_print(f"Error appending to file {file_path}: {e}")
+        send_tool_update(f"Error appending to file {file_path}: {e}")
         return str(e)
 
 
@@ -110,6 +121,7 @@ def summarize_for_query(query, webpage_text):
     """
 
     debug_print(f"Summarizing webpage for query: {query}")
+    send_tool_update(f"Summarizing webpage for query: {query}")
     response = OpenAI_GPT5_Nano.invoke(system_prompt)
 
     return response.content
@@ -117,7 +129,8 @@ def summarize_for_query(query, webpage_text):
 @tool("Read_webpage",description="Read and summarize a webpage based on the user's query. Returns only the most relevant information from the page.")
 def read_webpage(url: str, query: str):
 
-    debug_print(f"reading page {url} for query: {query}")
+    debug_print(f"reading page {url[:10]} for query: {query}")
+    send_tool_update(f"Reading webpage {url[:10]} for query: {query}")
 
     reader_url = f"https://r.jina.ai/{url}"
 
@@ -126,6 +139,7 @@ def read_webpage(url: str, query: str):
     response_text = summarize_for_query(query, response.text)
 
     debug_print(f"returning read webpage response: {response_text[:50]}...")
+    send_tool_update(f"Read webpage {url[:10]} for query: {query}, response: {response_text[:50]}...")
 
     return response_text[:6000]
 
@@ -143,6 +157,7 @@ def read_webpage(url: str, query: str):
 def Get_relevant_webpages(query: str):
 
     debug_print(f"Performing web search for query: {query}")
+    send_tool_update(f"Performing web search for query: {query}")
 
     results = DDGS().text(query,max_results=5)
 
@@ -154,6 +169,6 @@ def Get_relevant_webpages(query: str):
             f"Link: {r['href']}\n"
             f"Description: {r['body']}\n"
         )
-    debug_print(f"Returning {len(formatted)} relevant webpages for query: {query}")
-
+    debug_print(f"Found {len(formatted)} relevant webpages for query: {query}")
+    send_tool_update(f"Found {len(formatted)} relevant webpages for query: {query}")
     return "\n\n".join(formatted)
