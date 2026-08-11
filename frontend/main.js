@@ -3,6 +3,7 @@
         const sendButton = document.getElementById("send");
 
         function addMessage(content, type, markdown = false) {
+            document.body.classList.add("has-messages");
             const message = document.createElement("div");
             message.classList.add("message", type);
 
@@ -11,6 +12,15 @@
             } else {
                 message.textContent = content;
             }
+
+            const timestamp = document.createElement("time");
+            timestamp.className = "message-time";
+            timestamp.dateTime = new Date().toISOString();
+            timestamp.textContent = new Intl.DateTimeFormat([], {
+                hour: "numeric",
+                minute: "2-digit"
+            }).format(new Date());
+            message.appendChild(timestamp);
 
             chat.appendChild(message);
 

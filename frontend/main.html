@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Agent</title>
+    <title>Andromeda</title>
+    <link rel="icon" type="image/png" href="Logo.png">
 
     <!-- Markdown renderer -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -12,20 +13,26 @@
 
 <body>
 
+    <div id="idle-state" aria-hidden="true">
+        <img src="Logo.png" alt="">
+        <span>Andromeda</span>
+    </div>
+
     <div id="chat"></div>
 
     <div id="input-area">
-        <input
-            id="input"
-            type="text"
-            placeholder="Ask something..."
-            autocomplete="off"
-        />
-
-        <button id="send">Send</button>
+        <div id="input-shell">
+            <input
+                id="input"
+                type="text"
+                placeholder="Ask Andromeda anything..."
+                autocomplete="off"
+            />
+            <button id="send" aria-label="Send message" title="Send message">
+                <span aria-hidden="true">↑</span>
+            </button>
+        </div>
     </div>
-
-    /* script in main.js */
     <script src="main.js"></script>
 
 </body>
