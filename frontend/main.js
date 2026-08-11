@@ -121,7 +121,6 @@
 
             // Show user message
             addMessage(userInput, "user");
-            startToolRun();
 
             input.value = "";
             sendButton.disabled = true;
