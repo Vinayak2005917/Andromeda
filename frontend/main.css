@@ -20,6 +20,75 @@ body {
     position: relative;
 }
 
+.hidden { display: none !important; }
+
+.auth-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: #181818;
+}
+
+.auth-card {
+    width: min(390px, 100%);
+    padding: 34px;
+    border: 1px solid #353535;
+    border-radius: 22px;
+    background: #242424;
+    box-shadow: 0 20px 70px rgba(0, 0, 0, .35);
+}
+
+.auth-logo {
+    display: block;
+    width: 64px;
+    margin: 0 auto 22px;
+    opacity: .8;
+}
+
+.auth-card h1 { margin: 0; text-align: center; font-size: 24px; }
+.auth-card p { color: #999; text-align: center; }
+.auth-field { display: block; margin-top: 16px; color: #bbb; font-size: 13px; }
+.auth-field input {
+    display: block;
+    width: 100%;
+    margin-top: 7px;
+    padding: 12px 13px;
+    border: 1px solid #454545;
+    border-radius: 10px;
+    background: #181818;
+    color: #fff;
+    outline: none;
+    font: inherit;
+}
+.auth-field input:focus { border-color: #777; }
+.auth-error { min-height: 20px; margin: 14px 0 0; color: #e88b8b !important; font-size: 13px; }
+.auth-submit { width: 100%; height: 44px; margin-top: 4px; border-radius: 10px; font-size: 14px; }
+.auth-toggle { width: 100%; height: auto; margin-top: 18px; padding: 4px; background: transparent; color: #aaa; font-size: 13px; }
+.auth-toggle:hover:not(:disabled) { background: transparent; color: #fff; transform: none; }
+
+.user-profile {
+    position: fixed;
+    top: 18px;
+    left: 20px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: calc(100% - 40px);
+    padding: 10px 12px;
+    border: 1px solid #353535;
+    border-radius: 12px;
+    background: rgba(36, 36, 36, .92);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .2);
+    backdrop-filter: blur(16px);
+}
+.user-name { color: #f1f1f1; font-size: 13px; font-weight: 600; }
+.user-email { max-width: 190px; overflow: hidden; color: #929292; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.logout-button { width: auto; height: 30px; padding: 0 10px; border-radius: 8px; font-size: 12px; }
+
 #chat {
     flex: 1;
     overflow-y: auto;
@@ -285,4 +354,6 @@ button:disabled {
     .message { max-width: 88%; }
     #input-area { bottom: 14px; width: calc(100% - 22px); }
     .connection-indicator { left: auto; right: 13px; top: -13px; }
+    .user-profile { top: 12px; left: 12px; }
+    .auth-card { padding: 28px 22px; }
 }

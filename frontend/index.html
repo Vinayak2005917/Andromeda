@@ -13,6 +13,39 @@
 
 <body>
 
+    <section id="auth-screen" class="auth-screen">
+        <div class="auth-card">
+            <img src="Logo.png" alt="Andromeda" class="auth-logo">
+            <h1 id="auth-title">Welcome to Andromeda</h1>
+            <p id="auth-subtitle">Sign in to continue.</p>
+            <form id="auth-form">
+                <label id="name-field" class="auth-field hidden">
+                    Name
+                    <input id="name-input" type="text" autocomplete="name" maxlength="100">
+                </label>
+                <label class="auth-field">
+                    Email
+                    <input id="email-input" type="email" autocomplete="email" required>
+                </label>
+                <label class="auth-field">
+                    Password
+                    <input id="password-input" type="password" autocomplete="current-password" minlength="8" required>
+                </label>
+                <p id="auth-error" class="auth-error" role="alert"></p>
+                <button id="auth-submit" class="auth-submit" type="submit">Sign in</button>
+            </form>
+            <button id="auth-toggle" class="auth-toggle" type="button">Create an account</button>
+        </div>
+    </section>
+
+    <header id="user-profile" class="user-profile hidden">
+        <div>
+            <div id="user-name" class="user-name"></div>
+            <div id="user-email" class="user-email"></div>
+        </div>
+        <button id="logout" class="logout-button" type="button">Log out</button>
+    </header>
+
     <div id="idle-state" aria-hidden="true">
         <img src="Logo.png" alt="">
         <span>Andromeda</span>
