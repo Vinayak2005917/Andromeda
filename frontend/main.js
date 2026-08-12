@@ -13,8 +13,8 @@
         }
 
         function connectSocket() {
-            const host = "https://andromeda-3fdr.onrender.com";
-            socket = new WebSocket(`ws://${host}:8000/ws`);
+            const socketUrl = "wss://andromeda-3fdr.onrender.com/ws";
+            socket = new WebSocket(socketUrl);
 
             socket.addEventListener("open", () => {
                 setConnectionState(true);
