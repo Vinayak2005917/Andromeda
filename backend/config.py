@@ -11,8 +11,18 @@ class Settings:
 
     frontend_url: str = os.getenv(
         "FRONTEND_URL",
-        "http://localhost:5500",
+        "https://andromeda-teal.vercel.app",
     )
+
+    @property
+    def cors_origins(self) -> list[str]:
+        configured = os.getenv("CORS_ORIGINS", self.frontend_url)
+        origins = [origin.strip().rstrip("/") for origin in configured.split(",")]
+        origins.extend([
+            "https://andromeda-teal.vercel.app",
+            "http://localhost:5500",
+        ])
+        return list(dict.fromkeys(origin for origin in origins if origin))
 
     cookie_secure: bool = os.getenv("COOKIE_SECURE","false").lower() == "true"
 
