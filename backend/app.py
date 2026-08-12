@@ -23,6 +23,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 #health endpoint
 @app.get("/health")
+@app.head("/health")
 async def health():
     return {"status": "ok"}
 
