@@ -1,5 +1,17 @@
-const API_URL = "https://andromeda-3fdr.onrender.com";
-const WS_URL = "wss://andromeda-3fdr.onrender.com/ws";
+
+const dev = "render";
+
+let API_URL;
+let WS_URL;
+
+if(dev === "local") {
+    API_URL = "http://localhost:8000";
+    WS_URL = "ws://localhost:8000/ws";
+} 
+else if(dev === "render") {
+    API_URL = "https://andromeda-3fdr.onrender.com";
+    WS_URL = "wss://andromeda-3fdr.onrender.com/ws";
+}
 
 const authScreen = document.getElementById("auth-screen");
 const authForm = document.getElementById("auth-form");
