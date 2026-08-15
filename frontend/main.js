@@ -1,13 +1,13 @@
 
-const dev = "render";
+const dev = "local";
 
 let API_URL;
 let WS_URL;
 
-if(dev === "local") {
-    API_URL = "http://localhost:8000";
-    WS_URL = "ws://localhost:8000/ws";
-} 
+if (dev === "local") {
+    API_URL = "http://127.0.0.1:8000";
+    WS_URL = "ws://127.0.0.1:8000/ws";
+}
 else if(dev === "render") {
     API_URL = "https://andromeda-3fdr.onrender.com";
     WS_URL = "wss://andromeda-3fdr.onrender.com/ws";
@@ -19,6 +19,7 @@ const authTitle = document.getElementById("auth-title");
 const authSubtitle = document.getElementById("auth-subtitle");
 const authSubmit = document.getElementById("auth-submit");
 const authToggle = document.getElementById("auth-toggle");
+const guestButton = document.getElementById("guest-button");
 const authError = document.getElementById("auth-error");
 const nameField = document.getElementById("name-field");
 const nameInput = document.getElementById("name-input");
@@ -32,11 +33,19 @@ const chat = document.getElementById("chat");
 const input = document.getElementById("input");
 const sendButton = document.getElementById("send");
 const connectionIndicator = document.getElementById("connection-indicator");
+const sidebar = document.getElementById("conversation-sidebar");
+const conversationList = document.getElementById("conversation-list");
+const newConversationButton = document.getElementById("new-conversation");
 
 let socket;
 let activeToolRun = null;
 let isSignup = false;
 let isAuthenticated = false;
+let isGuest = false;
+let conversations = [];
+let activeConversationId = null;
+let guestThreadId = sessionStorage.getItem("andromeda_guest_thread") || `guest:${crypto.randomUUID()}`;
+sessionStorage.setItem("andromeda_guest_thread", guestThreadId);
 let reconnectTimer;
 
 function setAuthMode(signup) {
@@ -57,23 +66,36 @@ function showAuthError(message) {
 
 function showAuthenticatedUser(user) {
     isAuthenticated = true;
+    isGuest = false;
     userName.textContent = user.name || "User";
     userEmail.textContent = user.email || "";
     userProfile.classList.remove("hidden");
     authScreen.classList.add("hidden");
+    sidebar.classList.remove("hidden");
     sendButton.disabled = true;
     connectSocket();
 }
 
 function showAuthScreen() {
     isAuthenticated = false;
+    isGuest = false;
     window.clearTimeout(reconnectTimer);
     if (socket) socket.close();
     userProfile.classList.add("hidden");
+    sidebar.classList.add("hidden");
     authScreen.classList.remove("hidden");
     document.body.classList.remove("has-messages");
     setAuthMode(false);
     emailInput.focus();
+}
+
+function showGuestMode() {
+    isAuthenticated = false;
+    isGuest = true;
+    authScreen.classList.add("hidden");
+    userProfile.classList.add("hidden");
+    sidebar.classList.add("hidden");
+    connectSocket();
 }
 
 async function authRequest(path, body) {
@@ -103,6 +125,7 @@ async function restoreSession() {
 
         if (!response.ok) throw new Error("No active session");
         showAuthenticatedUser(await response.json());
+        await loadConversations();
     } catch {
         showAuthScreen();
     }
@@ -119,6 +142,7 @@ authForm.addEventListener("submit", async (event) => {
         const data = await authRequest(isSignup ? "signup" : "login", body);
         authForm.reset();
         showAuthenticatedUser(data.user);
+        await loadConversations();
     } catch (error) {
         showAuthError(error.message);
     } finally {
@@ -127,6 +151,56 @@ authForm.addEventListener("submit", async (event) => {
 });
 
 authToggle.addEventListener("click", () => setAuthMode(!isSignup));
+guestButton.addEventListener("click", showGuestMode);
+
+async function loadConversations() {
+    const response = await fetch(`${API_URL}/api/v1/conversations`, { credentials: "include" });
+    if (!response.ok) throw new Error("Unable to load conversations");
+    conversations = await response.json();
+    renderConversations();
+    if (!activeConversationId && conversations.length) selectConversation(conversations[0].id);
+    if (!activeConversationId && !conversations.length) await createNewConversation();
+}
+
+function renderConversations() {
+    conversationList.replaceChildren();
+    conversations.forEach((conversation) => {
+        const button = document.createElement("button");
+        button.className = `conversation-item${conversation.id === activeConversationId ? " active" : ""}`;
+        button.textContent = conversation.title;
+        button.title = conversation.title;
+        button.addEventListener("click", () => selectConversation(conversation.id));
+        conversationList.appendChild(button);
+    });
+}
+
+async function selectConversation(id) {
+    activeConversationId = id;
+    renderConversations();
+    chat.replaceChildren();
+    document.body.classList.remove("has-messages");
+    finishToolRun();
+    if (!isAuthenticated) return;
+    const response = await fetch(`${API_URL}/api/v1/conversations/${id}/messages`, { credentials: "include" });
+    if (!response.ok) return;
+    const messages = await response.json();
+    messages.forEach((message) => addMessage(message.content, message.role === "user" ? "user" : "agent", message.role === "assistant"));
+}
+
+async function createNewConversation() {
+    const response = await fetch(`${API_URL}/api/v1/conversations`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New conversation" }),
+    });
+    if (!response.ok) throw new Error("Unable to create conversation");
+    const conversation = await response.json();
+    conversations.unshift(conversation);
+    selectConversation(conversation.id);
+    return conversation;
+}
+
+newConversationButton.addEventListener("click", createNewConversation);
 
 logoutButton.addEventListener("click", async () => {
     logoutButton.disabled = true;
@@ -160,7 +234,7 @@ function connectSocket() {
     socket.addEventListener("close", (event) => {
         setConnectionState(false);
         sendButton.disabled = true;
-        if (event.code === 1008 || !isAuthenticated) {
+        if (event.code === 1008 || (!isAuthenticated && !isGuest)) {
             showAuthScreen();
             return;
         }
@@ -177,6 +251,10 @@ function connectSocket() {
             finishToolRun();
             sendButton.disabled = false;
             input.focus();
+        }
+        if (data.type === "error") {
+            addMessage(data.content, "agent");
+            sendButton.disabled = false;
         }
     });
 }
@@ -226,13 +304,30 @@ function addMessage(content, type, markdown = false) {
     chat.scrollTop = chat.scrollHeight;
 }
 
-function sendMessage() {
+async function sendMessage() {
     const userInput = input.value.trim();
     if (!userInput || !socket || socket.readyState !== WebSocket.OPEN) return;
+
+    if (isAuthenticated && !activeConversationId) {
+        sendButton.disabled = true;
+        try {
+            await createNewConversation();
+        } catch (error) {
+            sendButton.disabled = false;
+            addMessage(error.message || "Unable to start a conversation.", "agent");
+            return;
+        }
+    }
+
     addMessage(userInput, "user");
     input.value = "";
     sendButton.disabled = true;
-    socket.send(JSON.stringify({ type: "message", content: userInput }));
+    socket.send(JSON.stringify({
+        type: "message",
+        content: userInput,
+        conversation_id: activeConversationId,
+        guest_thread_id: guestThreadId,
+    }));
 }
 
 sendButton.addEventListener("click", sendMessage);

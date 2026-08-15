@@ -8,19 +8,25 @@ load_dotenv()
 class Settings:
     supabase_url: str = os.getenv("SUPABASE_URL", "")
     supabase_key: str = os.getenv("SUPABASE_PUBLISHABLE_KEY", "")
+    supabase_service_role_key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    supabase_db_url: str = os.getenv("SUPABASE_DB_URL", "")
+    memory_bucket: str = os.getenv("SUPABASE_MEMORY_BUCKET", "user-memory")
 
-    frontend_url: str = os.getenv(
-        "FRONTEND_URL",
-        "https://andromeda-teal.vercel.app",
-    )
+    frontend_url: str = os.getenv("FRONTEND_URL", "https://andromeda-teal.vercel.app")
 
     @property
     def cors_origins(self) -> list[str]:
-        configured = os.getenv("CORS_ORIGINS", self.frontend_url)
+        default_origins = ",".join([
+            "https://andromeda-teal.vercel.app",
+            "http://localhost:5500",
+            "http://127.0.0.1:5500",
+        ])
+        configured = os.getenv("CORS_ORIGINS", default_origins)
         origins = [origin.strip().rstrip("/") for origin in configured.split(",")]
         origins.extend([
             "https://andromeda-teal.vercel.app",
             "http://localhost:5500",
+            "http://127.0.0.1:5500",
         ])
         return list(dict.fromkeys(origin for origin in origins if origin))
 

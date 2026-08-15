@@ -1,4 +1,5 @@
 import asyncio
+import contextvars
 import inspect
 from datetime import datetime
 from fastapi import WebSocket
@@ -33,10 +34,20 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+_active_connection: contextvars.ContextVar[WebSocket | None] = contextvars.ContextVar("active_connection", default=None)
+
+
+def set_active_connection(websocket: WebSocket):
+    return _active_connection.set(websocket)
+
+
+def reset_active_connection(token):
+    _active_connection.reset(token)
 
 
 def send_tool_update(contents: str):
-    if manager.loop is None:
+    websocket = _active_connection.get()
+    if manager.loop is None or websocket is None:
         return
     
     frame = inspect.currentframe().f_back
@@ -56,4 +67,4 @@ def send_tool_update(contents: str):
     }
 
     # Safely schedule the async WebSocket send
-    asyncio.run_coroutine_threadsafe(manager.broadcast(message),manager.loop)
+    asyncio.run_coroutine_threadsafe(manager.send(websocket, message), manager.loop)

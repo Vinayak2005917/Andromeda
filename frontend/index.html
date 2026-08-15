@@ -35,6 +35,7 @@
                 <button id="auth-submit" class="auth-submit" type="submit">Sign in</button>
             </form>
             <button id="auth-toggle" class="auth-toggle" type="button">Create an account</button>
+            <button id="guest-button" class="auth-toggle" type="button">Continue as guest</button>
         </div>
     </section>
 
@@ -45,6 +46,14 @@
         </div>
         <button id="logout" class="logout-button" type="button">Log out</button>
     </header>
+
+    <aside id="conversation-sidebar" class="conversation-sidebar hidden">
+        <div class="sidebar-heading">
+            <span>Conversations</span>
+            <button id="new-conversation" class="new-conversation" type="button">+</button>
+        </div>
+        <div id="conversation-list"></div>
+    </aside>
 
     <div id="idle-state" aria-hidden="true">
         <img src="Logo.png" alt="">

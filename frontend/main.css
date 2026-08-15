@@ -89,12 +89,31 @@ body {
 .user-email { max-width: 190px; overflow: hidden; color: #929292; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .logout-button { width: auto; height: 30px; padding: 0 10px; border-radius: 8px; font-size: 12px; }
 
+.conversation-sidebar {
+    position: fixed;
+    top: 88px;
+    left: 20px;
+    bottom: 22px;
+    z-index: 3;
+    width: 220px;
+    padding: 14px;
+    border: 1px solid #353535;
+    border-radius: 14px;
+    background: rgba(36, 36, 36, .92);
+    backdrop-filter: blur(16px);
+    overflow-y: auto;
+}
+.sidebar-heading { display: flex; align-items: center; justify-content: space-between; color: #aaa; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.new-conversation { width: 26px; height: 26px; font-size: 20px; }
+.conversation-item { display: flex; width: 100%; margin-top: 8px; padding: 10px; border: 0; border-radius: 8px; background: transparent; color: #bbb; text-align: left; font-size: 13px; cursor: pointer; }
+.conversation-item:hover, .conversation-item.active { background: #303030; color: #fff; }
+
 #chat {
     flex: 1;
     overflow-y: auto;
-    width: min(820px, 100%);
+    width: 100%;
     margin: 0 auto;
-    padding: 34px 24px 130px;
+    padding: 34px max(24px, calc((100% - 1040px) / 2)) 130px;
     display: flex;
     flex-direction: column;
     gap: 18px;
@@ -103,9 +122,21 @@ body {
     scrollbar-color: #424242 transparent;
 }
 
+#chat::-webkit-scrollbar {
+    display: block;
+    width: 10px;
+}
+
+#chat::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: #424242;
+    background-clip: content-box;
+}
+
 .tool-run {
     align-self: center;
-    width: min(82%, 680px);
+    width: min(82%, 840px);
     max-width: 100%;
     margin-top: -10px;
     color: #8d8d8d;
@@ -157,8 +188,8 @@ body {
 .tool-entry-content {
     display: -webkit-box;
     overflow: hidden;
-    color: #999999;
-    font-size: 12px;
+    color: #c8c8c8;
+    font-size: 15px;
     line-height: 1.45;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 4;
@@ -201,7 +232,7 @@ body.has-messages #idle-state {
 }
 
 .message {
-    max-width: min(75%, 620px);
+    max-width: min(75%, 760px);
     padding: 13px 17px;
     border-radius: 18px;
     line-height: 1.5;
@@ -220,14 +251,14 @@ body.has-messages #idle-state {
 
 .user {
     align-self: flex-end;
-    background: #343434;
+    background: #34343422;
     border-bottom-right-radius: 6px;
 }
 
 .agent {
+    max-width: 100%;
     align-self: flex-start;
-    background: #242424;
-    border: 1px solid #303030;
+    background: #181818;
     border-bottom-left-radius: 6px;
 }
 
@@ -256,7 +287,7 @@ body.has-messages #idle-state {
     z-index: 2;
     bottom: 22px;
     left: 50%;
-    width: min(760px, calc(100% - 32px));
+    width: min(920px, calc(100% - 32px));
     transform: translateX(-50%);
     padding: 0;
 }
@@ -356,4 +387,5 @@ button:disabled {
     .connection-indicator { left: auto; right: 13px; top: -13px; }
     .user-profile { top: 12px; left: 12px; }
     .auth-card { padding: 28px 22px; }
+    .conversation-sidebar { top: 70px; left: 12px; bottom: 12px; width: 190px; }
 }

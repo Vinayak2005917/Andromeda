@@ -20,3 +20,11 @@ class UserResponse(BaseModel):
 
 class AuthResponse(BaseModel):
     user: UserResponse
+
+
+class ConversationCreateRequest(BaseModel):
+    title: str = Field(default="New conversation", max_length=120)
+
+
+class ConversationRenameRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
