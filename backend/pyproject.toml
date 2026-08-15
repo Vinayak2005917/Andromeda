@@ -16,4 +16,5 @@ dependencies = [
     "pydantic[email]>=2.13.4",
     "langgraph-checkpoint-postgres>=3.0.0",
     "psycopg[binary,pool]>=3.2.0",
+    "serpapi>=1.1.0",
 ]

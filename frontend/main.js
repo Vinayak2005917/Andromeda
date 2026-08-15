@@ -1,4 +1,3 @@
-
 const dev = "local";
 
 let API_URL;
@@ -34,10 +33,12 @@ const sidebar = document.getElementById("conversation-sidebar");
 const conversationList = document.getElementById("conversation-list");
 const newConversationButton = document.getElementById("new-conversation");
 const collapseSidebarButton = document.getElementById("collapse-sidebar");
-const keepConversationCheckbox = document.getElementById("keep-conversation");
+const suggestedPrompts = document.querySelectorAll(".suggested-prompt");
 
 let socket;
 let activeToolRun = null;
+let transientUserUpdates = [];
+let userUpdateRunActive = false;
 let isSignup = false;
 let isAuthenticated = false;
 let isGuest = false;
@@ -45,11 +46,12 @@ let conversations = [];
 let activeConversationId = null;
 let activeConversationHasMessages = false;
 let showToolCalls = false;
+let isSubmittingMessage = false;
+let htmlResponseReceived = false;
+let htmlLoadingMessage = null;
 let guestThreadId = sessionStorage.getItem("andromeda_guest_thread") || `guest:${crypto.randomUUID()}`;
 sessionStorage.setItem("andromeda_guest_thread", guestThreadId);
 let reconnectTimer;
-const keepConversationStorageKey = "andromeda_keep_conversation";
-const activeConversationStorageKey = "andromeda_active_conversation";
 
 function setAuthMode(signup) {
     isSignup = signup;
@@ -72,6 +74,10 @@ function showAuthenticatedUser(user) {
     logoutButton.classList.remove("hidden");
     authScreen.classList.add("hidden");
     sidebar.classList.remove("hidden");
+    sidebar.classList.add("collapsed");
+    collapseSidebarButton.textContent = "›";
+    collapseSidebarButton.setAttribute("aria-label", "Expand history");
+    collapseSidebarButton.title = "Expand history";
     sendButton.disabled = true;
     connectSocket();
 }
@@ -79,10 +85,12 @@ function showAuthenticatedUser(user) {
 function showAuthScreen() {
     isAuthenticated = false;
     isGuest = false;
+    userUpdateRunActive = false;
     window.clearTimeout(reconnectTimer);
     if (socket) socket.close();
     logoutButton.classList.add("hidden");
     sidebar.classList.add("hidden");
+    sidebar.classList.add("collapsed");
     authScreen.classList.remove("hidden");
     document.body.classList.remove("has-messages");
     setAuthMode(false);
@@ -167,12 +175,7 @@ async function loadConversations() {
     conversations = await response.json();
     activeConversationId = null;
     renderConversations();
-    const savedConversationId = localStorage.getItem(activeConversationStorageKey);
-    const conversationToRestore = keepConversationCheckbox.checked
-        ? conversations.find((conversation) => conversation.id === savedConversationId)
-        : null;
-    if (conversationToRestore) await selectConversation(conversationToRestore.id);
-    else await createNewConversation();
+    await createNewConversation();
 }
 
 function renderConversations() {
@@ -208,11 +211,11 @@ async function selectConversation(id) {
     activeConversationId = id;
     activeConversationHasMessages = false;
     showToolCalls = false;
-    if (keepConversationCheckbox.checked) localStorage.setItem(activeConversationStorageKey, id);
     renderConversations();
-    chat.replaceChildren();
-    document.body.classList.remove("has-messages");
+    if (!isSubmittingMessage) chat.replaceChildren();
+    if (!isSubmittingMessage) document.body.classList.remove("has-messages");
     finishToolRun();
+    userUpdateRunActive = false;
     if (!isAuthenticated) return;
     const response = await fetch(`${API_URL}/api/v1/conversations/${id}/messages`, { credentials: "include" });
     if (!response.ok) return;
@@ -256,9 +259,6 @@ async function discardEmptyActiveConversation(nextConversationId = null) {
     if (!response.ok) return;
 
     conversations = conversations.filter((conversation) => conversation.id !== emptyConversationId);
-    if (localStorage.getItem(activeConversationStorageKey) === emptyConversationId) {
-        localStorage.removeItem(activeConversationStorageKey);
-    }
     activeConversationId = null;
     activeConversationHasMessages = false;
     renderConversations();
@@ -275,7 +275,6 @@ async function deleteConversation(id) {
     if (!response.ok) return;
 
     conversations = conversations.filter((item) => item.id !== id);
-    if (localStorage.getItem(activeConversationStorageKey) === id) localStorage.removeItem(activeConversationStorageKey);
     if (activeConversationId === id) {
         activeConversationId = null;
         activeConversationHasMessages = false;
@@ -293,16 +292,6 @@ collapseSidebarButton.addEventListener("click", () => {
     collapseSidebarButton.textContent = collapsed ? "›" : "‹";
     collapseSidebarButton.setAttribute("aria-label", collapsed ? "Expand history" : "Collapse history");
     collapseSidebarButton.title = collapsed ? "Expand history" : "Collapse history";
-});
-
-keepConversationCheckbox.checked = localStorage.getItem(keepConversationStorageKey) === "true";
-keepConversationCheckbox.addEventListener("change", () => {
-    localStorage.setItem(keepConversationStorageKey, keepConversationCheckbox.checked ? "true" : "false");
-    if (keepConversationCheckbox.checked && activeConversationId) {
-        localStorage.setItem(activeConversationStorageKey, activeConversationId);
-    } else if (!keepConversationCheckbox.checked) {
-        localStorage.removeItem(activeConversationStorageKey);
-    }
 });
 
 logoutButton.addEventListener("click", async () => {
@@ -350,13 +339,34 @@ function connectSocket() {
     socket.addEventListener("message", (event) => {
         const data = JSON.parse(event.data);
         if (data.type === "tool_update") return appendToolUpdate(data);
+        if (data.type === "user_update") return appendUserUpdate(data);
+        if (data.type === "html_response") {
+            console.log("[HTML response] received height_guess:", data.height_guess);
+            removeHTMLLoadingMessage();
+            userUpdateRunActive = false;
+            htmlResponseReceived = true;
+            addHTMLMessage(data.content, data.height_guess);
+            finishToolRun();
+            sendButton.disabled = false;
+            input.focus();
+            return;
+        }
         if (data.type === "response") {
-            addMessage(data.content, "agent", true);
+            removeHTMLLoadingMessage();
+            userUpdateRunActive = false;
+            // send_html_response returns a short acknowledgement after it has
+            // already delivered the actual HTML over the WebSocket.
+            const isHTMLAcknowledgement = htmlResponseReceived &&
+                data.content === "HTML response sent to user.";
+            if (!isHTMLAcknowledgement) addMessage(data.content, "agent", true);
+            htmlResponseReceived = false;
             finishToolRun();
             sendButton.disabled = false;
             input.focus();
         }
         if (data.type === "error") {
+            removeHTMLLoadingMessage();
+            userUpdateRunActive = false;
             addMessage(data.content, "agent");
             sendButton.disabled = false;
         }
@@ -394,10 +404,43 @@ function appendToolUpdate(update) {
 
 function finishToolRun() { activeToolRun = null; }
 
-function addMessage(content, type, markdown = false) {
+function appendUserUpdate(update) {
+    if (!userUpdateRunActive) return;
+    const message = addMessage(update.content || "", "agent");
+    message.classList.add("transient-user-update");
+    transientUserUpdates.push(message);
+}
+
+function clearUserUpdates() {
+    transientUserUpdates.forEach((message) => message.remove());
+    transientUserUpdates = [];
+}
+
+function showHTMLLoadingMessage() {
+    removeHTMLLoadingMessage();
+
+    htmlLoadingMessage = document.createElement("div");
+    htmlLoadingMessage.className = "message agent html-loading-message";
+    htmlLoadingMessage.innerHTML = `
+        <span>Generating HTML</span>
+        <span class="loading-dots" aria-label="Loading">
+            <span></span><span></span><span></span>
+        </span>
+    `;
+    chat.appendChild(htmlLoadingMessage);
+    chat.scrollTop = chat.scrollHeight;
+}
+
+function removeHTMLLoadingMessage() {
+    htmlLoadingMessage?.remove();
+    htmlLoadingMessage = null;
+}
+
+function addMessage(content, type, markdown = false, animateAfterEmptyState = false) {
     document.body.classList.add("has-messages");
     const message = document.createElement("div");
     message.classList.add("message", type);
+    if (animateAfterEmptyState) message.classList.add("user-message-entering");
     if (markdown) message.innerHTML = marked.parse(content);
     else message.textContent = content;
     const timestamp = document.createElement("time");
@@ -407,17 +450,119 @@ function addMessage(content, type, markdown = false) {
     message.appendChild(timestamp);
     chat.appendChild(message);
     chat.scrollTop = chat.scrollHeight;
+    return message;
+}
+
+function getHTMLFrameHeight(heightGuess) {
+    const numericHeight = typeof heightGuess === "number"
+        ? heightGuess
+        : typeof heightGuess === "string" && heightGuess.trim() !== ""
+            ? Number(heightGuess)
+            : NaN;
+
+    if (!Number.isFinite(numericHeight)) return 720;
+    if (numericHeight < 900) return 600;
+    if (numericHeight <= 1800) return 720;
+    return 850;
+}
+
+function prepareHTMLDocument(htmlContent) {
+    if (typeof htmlContent !== "string") return "";
+
+    const scrollbarCSS = `
+        <style id="andromeda-embed-scrollbar">
+            html {
+                scrollbar-width: thin;
+                scrollbar-color: #424242 transparent;
+            }
+
+            ::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                border: 1px solid transparent;
+                border-radius: 999px;
+                background: #424242;
+                background-clip: content-box;
+            }
+        </style>
+    `;
+
+    if (/<\/head\s*>/i.test(htmlContent)) {
+        return htmlContent.replace(/<\/head\s*>/i, `${scrollbarCSS}</head>`);
+    }
+
+    return `${scrollbarCSS}${htmlContent}`;
+}
+
+
+function addHTMLMessage(htmlContent, heightGuess) {
+    document.body.classList.add("has-messages");
+
+    const message = document.createElement("div");
+    message.classList.add("message", "agent", "html-message");
+
+    const frame = document.createElement("iframe");
+
+    frame.className = "html-response-frame";
+    frame.title = "Interactive HTML response";
+    frame.setAttribute("scrolling", "auto");
+
+    const iframeHeight = getHTMLFrameHeight(heightGuess);
+    frame.height = iframeHeight;
+    frame.style.height = `${iframeHeight}px`;
+    frame.srcdoc = prepareHTMLDocument(htmlContent);
+
+    const timestamp = document.createElement("time");
+
+    timestamp.className = "message-time";
+    timestamp.dateTime = new Date().toISOString();
+
+    timestamp.textContent =
+        new Intl.DateTimeFormat([], {
+            hour: "numeric",
+            minute: "2-digit"
+        }).format(new Date());
+
+    message.append(frame, timestamp);
+
+    chat.appendChild(message);
+    chat.scrollTop = chat.scrollHeight;
+
+    return message;
+}
+
+function isChatNearBottom() {
+    const distanceFromBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight;
+    return distanceFromBottom < 64;
 }
 
 async function sendMessage() {
     const userInput = input.value.trim();
     if (!userInput || !socket || socket.readyState !== WebSocket.OPEN) return;
 
+    // Start the empty-state animation before any conversation setup requests.
+    const isFirstMessage = !document.body.classList.contains("has-messages");
+    isSubmittingMessage = true;
+    document.body.classList.add("has-messages");
+    addMessage(userInput, "user", false, isFirstMessage);
+    activeConversationHasMessages = true;
+    input.value = "";
+    sendButton.disabled = true;
+    showToolCalls = true;
+    htmlResponseReceived = false;
+    userUpdateRunActive = true;
+    showHTMLLoadingMessage();
+
     if (isAuthenticated && !activeConversationId) {
-        sendButton.disabled = true;
         try {
             await createNewConversation();
         } catch (error) {
+            isSubmittingMessage = false;
+            userUpdateRunActive = false;
+            removeHTMLLoadingMessage();
             sendButton.disabled = false;
             addMessage(error.message || "Unable to start a conversation.", "agent");
             return;
@@ -443,11 +588,7 @@ async function sendMessage() {
         }
     }
 
-    addMessage(userInput, "user");
-    activeConversationHasMessages = true;
-    input.value = "";
-    sendButton.disabled = true;
-    showToolCalls = true;
+    isSubmittingMessage = false;
     socket.send(JSON.stringify({
         type: "message",
         content: userInput,
@@ -457,6 +598,13 @@ async function sendMessage() {
 }
 
 sendButton.addEventListener("click", sendMessage);
+suggestedPrompts.forEach((promptButton) => {
+    promptButton.addEventListener("click", () => {
+        input.value = promptButton.dataset.prompt || "";
+        input.focus();
+    });
+});
+
 input.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();

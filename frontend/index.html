@@ -64,10 +64,6 @@
                 <button id="collapse-sidebar" class="collapse-sidebar" type="button" aria-label="Collapse history" title="Collapse history">‹</button>
             </div>
         </div>
-        <label class="keep-conversation">
-            <input id="keep-conversation" type="checkbox">
-            <span>Keep conversation on reload</span>
-        </label>
         <div id="conversation-list"></div>
     </aside>
 
@@ -75,7 +71,12 @@
 
     <div id="idle-state" aria-hidden="true">
         <img src="Logo.png" alt="">
-        <span>Andromeda</span>
+        <span class="idle-title">What's our Next expedition?</span>
+        <div class="suggested-prompts" aria-label="Suggested prompts">
+            <button class="suggested-prompt" type="button" data-prompt="What mysteries are hiding in the universe?">What mysteries are hiding in the universe?</button>
+            <button class="suggested-prompt" type="button" data-prompt="How do I get started with Andromeda?">How do I get started with Andromeda?</button>
+            <button class="suggested-prompt" type="button" data-prompt="What are the latest discoveries in AI?">What are the latest discoveries in AI?</button>
+        </div>
     </div>
 
     <div id="chat"></div>
@@ -88,13 +89,13 @@
                 placeholder="Ask Andromeda anything..."
                 autocomplete="off"
             />
-            <button id="send" aria-label="Send message" title="Send message">
-                <span aria-hidden="true">↑</span>
+            <button id="send" class="send" aria-label="Send message" title="Send message">
+                    <img src="Send.png" alt="Send">
             </button>
         </div>
         <span id="connection-indicator" class="connection-indicator" aria-label="Disconnected" title="Disconnected"></span>
     </div>
-    <script src="main.js"></script>
+    <script type="module" src="main.js"></script>
 
 </body>
 </html>

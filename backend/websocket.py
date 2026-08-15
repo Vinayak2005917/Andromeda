@@ -68,3 +68,27 @@ def send_tool_update(contents: str):
 
     # Safely schedule the async WebSocket send
     asyncio.run_coroutine_threadsafe(manager.send(websocket, message), manager.loop)
+
+def send_user_update(contents: str):
+    websocket = _active_connection.get()
+    if manager.loop is None or websocket is None:
+        return
+    message = {
+        "type": "user_update",
+        "content": contents,
+    }
+    # Safely schedule the async WebSocket send
+    asyncio.run_coroutine_threadsafe(manager.send(websocket, message), manager.loop)
+
+
+def send_HTML(html_content: str, height_guess: int = 720):
+    websocket = _active_connection.get()
+    if manager.loop is None or websocket is None:
+        return
+    message = {
+        "type": "html_response",
+        "content": html_content,
+        "height_guess": height_guess
+    }
+    # Safely schedule the async WebSocket send
+    asyncio.run_coroutine_threadsafe(manager.send(websocket, message), manager.loop)
