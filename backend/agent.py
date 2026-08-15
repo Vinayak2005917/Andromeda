@@ -80,3 +80,8 @@ def get_thread_messages(thread_id: str) -> list[dict]:
             content = "".join(str(part.get("text", part)) if isinstance(part, dict) else str(part) for part in content)
         result.append({"role": "user" if role == "human" else "assistant", "content": content})
     return result
+
+
+def thread_has_messages(thread_id: str) -> bool:
+    """Return whether a persisted agent thread contains visible chat messages."""
+    return bool(get_thread_messages(thread_id))

@@ -7,7 +7,7 @@ from agent import ask_agent, get_thread_messages
 from auth import extract_user_data, get_current_user, verify_access_token
 from auth_routes import router as auth_router
 from config import settings
-from conversations import create_conversation, delete_conversation, get_owned_conversation, list_conversations, rename_conversation, touch_conversation
+from conversations import create_conversation, delete_conversation, delete_empty_conversations, get_owned_conversation, list_conversations, rename_conversation, touch_conversation
 from schemas import ConversationCreateRequest, ConversationRenameRequest
 from websocket import manager, reset_active_connection, set_active_connection
 
@@ -30,7 +30,9 @@ app.include_router(auth_router)
 
 @app.get("/api/v1/conversations")
 def get_conversations(user=Depends(get_current_user)):
-    return list_conversations(str(user.id))
+    user_id = str(user.id)
+    delete_empty_conversations(user_id)
+    return list_conversations(user_id)
 
 
 @app.post("/api/v1/conversations", status_code=status.HTTP_201_CREATED)

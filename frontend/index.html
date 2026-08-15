@@ -14,9 +14,20 @@
 <body>
 
     <section id="auth-screen" class="auth-screen">
+        <a class="auth-github" href="https://github.com/Vinayak2005917/Andromeda" target="_blank" rel="noopener noreferrer">
+            <img src="GitHub_logo_White.png" alt="GitHub">
+            <span>Vinayak2005917/Andromeda</span>
+        </a>
+        <div class="auth-promo">
+            <h1>Andromeda</h1>
+            <p style="font-size: large;"><strong>Keep what matters in your orbit.</strong></p>
+            <p>Put something in your Orbit and Andromeda will keep track of it,
+                Watching for the moment it matters to you.
+                So you can focus on what matters to you in the moment.
+            </p>
+            <button id="guest-button" class="quick-demo-button" type="button">Quick Demo?</button>
+        </div>
         <div class="auth-card">
-            <img src="Logo.png" alt="Andromeda" class="auth-logo">
-            <h1 id="auth-title">Welcome to Andromeda</h1>
             <p id="auth-subtitle">Sign in to continue.</p>
             <form id="auth-form">
                 <label id="name-field" class="auth-field hidden">
@@ -29,31 +40,38 @@
                 </label>
                 <label class="auth-field">
                     Password
-                    <input id="password-input" type="password" autocomplete="current-password" minlength="8" required>
+                    <span class="password-field">
+                        <input id="password-input" type="password" autocomplete="current-password" minlength="8" required>
+                        <button id="toggle-password" class="toggle-password" type="button" aria-label="Show password" title="Show password">◉</button>
+                    </span>
                 </label>
                 <p id="auth-error" class="auth-error" role="alert"></p>
-                <button id="auth-submit" class="auth-submit" type="submit">Sign in</button>
+                <div class="auth-actions">
+                    <button id="auth-submit" class="auth-action-button" type="submit">Continue!</button>
+                    <button id="auth-toggle" class="auth-action-button" type="button">I am new here</button>
+                </div>
             </form>
-            <button id="auth-toggle" class="auth-toggle" type="button">Create an account</button>
-            <button id="guest-button" class="auth-toggle" type="button">Continue as guest</button>
         </div>
     </section>
 
-    <header id="user-profile" class="user-profile hidden">
-        <div>
-            <div id="user-name" class="user-name"></div>
-            <div id="user-email" class="user-email"></div>
-        </div>
-        <button id="logout" class="logout-button" type="button">Log out</button>
-    </header>
-
     <aside id="conversation-sidebar" class="conversation-sidebar hidden">
         <div class="sidebar-heading">
-            <span>Conversations</span>
-            <button id="new-conversation" class="new-conversation" type="button">+</button>
+            <span>History</span>
+            <div class="sidebar-actions">
+                <button id="new-conversation" class="new-conversation" type="button" aria-label="New conversation" title="New conversation">
+                    <img src="Logo.png" alt="">
+                </button>
+                <button id="collapse-sidebar" class="collapse-sidebar" type="button" aria-label="Collapse history" title="Collapse history">‹</button>
+            </div>
         </div>
+        <label class="keep-conversation">
+            <input id="keep-conversation" type="checkbox">
+            <span>Keep conversation on reload</span>
+        </label>
         <div id="conversation-list"></div>
     </aside>
+
+    <button id="logout" class="logout-button hidden" type="button">Log out</button>
 
     <div id="idle-state" aria-hidden="true">
         <img src="Logo.png" alt="">

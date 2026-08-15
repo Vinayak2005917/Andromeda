@@ -19,6 +19,15 @@ def list_conversations(user_id: str) -> list[dict]:
     return response.data or []
 
 
+def delete_empty_conversations(user_id: str) -> None:
+    """Remove conversation rows whose agent thread has no user/assistant messages."""
+    from agent import thread_has_messages
+
+    for conversation in list_conversations(user_id):
+        if not thread_has_messages(conversation["thread_id"]):
+            delete_conversation(user_id, conversation["id"])
+
+
 def create_conversation(user_id: str, title: str = "New conversation") -> dict:
     conversation_id = str(uuid4())
     response = _client().table("conversations").insert({

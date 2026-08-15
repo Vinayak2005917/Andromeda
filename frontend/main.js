@@ -15,7 +15,6 @@ else if(dev === "render") {
 
 const authScreen = document.getElementById("auth-screen");
 const authForm = document.getElementById("auth-form");
-const authTitle = document.getElementById("auth-title");
 const authSubtitle = document.getElementById("auth-subtitle");
 const authSubmit = document.getElementById("auth-submit");
 const authToggle = document.getElementById("auth-toggle");
@@ -25,9 +24,7 @@ const nameField = document.getElementById("name-field");
 const nameInput = document.getElementById("name-input");
 const emailInput = document.getElementById("email-input");
 const passwordInput = document.getElementById("password-input");
-const userProfile = document.getElementById("user-profile");
-const userName = document.getElementById("user-name");
-const userEmail = document.getElementById("user-email");
+const togglePasswordButton = document.getElementById("toggle-password");
 const logoutButton = document.getElementById("logout");
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
@@ -36,6 +33,8 @@ const connectionIndicator = document.getElementById("connection-indicator");
 const sidebar = document.getElementById("conversation-sidebar");
 const conversationList = document.getElementById("conversation-list");
 const newConversationButton = document.getElementById("new-conversation");
+const collapseSidebarButton = document.getElementById("collapse-sidebar");
+const keepConversationCheckbox = document.getElementById("keep-conversation");
 
 let socket;
 let activeToolRun = null;
@@ -44,13 +43,16 @@ let isAuthenticated = false;
 let isGuest = false;
 let conversations = [];
 let activeConversationId = null;
+let activeConversationHasMessages = false;
+let showToolCalls = false;
 let guestThreadId = sessionStorage.getItem("andromeda_guest_thread") || `guest:${crypto.randomUUID()}`;
 sessionStorage.setItem("andromeda_guest_thread", guestThreadId);
 let reconnectTimer;
+const keepConversationStorageKey = "andromeda_keep_conversation";
+const activeConversationStorageKey = "andromeda_active_conversation";
 
 function setAuthMode(signup) {
     isSignup = signup;
-    authTitle.textContent = signup ? "Create your account" : "Welcome to Andromeda";
     authSubtitle.textContent = signup ? "Get started with Andromeda." : "Sign in to continue.";
     authSubmit.textContent = signup ? "Create account" : "Sign in";
     authToggle.textContent = signup ? "Already have an account? Sign in" : "Create an account";
@@ -67,9 +69,7 @@ function showAuthError(message) {
 function showAuthenticatedUser(user) {
     isAuthenticated = true;
     isGuest = false;
-    userName.textContent = user.name || "User";
-    userEmail.textContent = user.email || "";
-    userProfile.classList.remove("hidden");
+    logoutButton.classList.remove("hidden");
     authScreen.classList.add("hidden");
     sidebar.classList.remove("hidden");
     sendButton.disabled = true;
@@ -81,7 +81,7 @@ function showAuthScreen() {
     isGuest = false;
     window.clearTimeout(reconnectTimer);
     if (socket) socket.close();
-    userProfile.classList.add("hidden");
+    logoutButton.classList.add("hidden");
     sidebar.classList.add("hidden");
     authScreen.classList.remove("hidden");
     document.body.classList.remove("has-messages");
@@ -93,7 +93,7 @@ function showGuestMode() {
     isAuthenticated = false;
     isGuest = true;
     authScreen.classList.add("hidden");
-    userProfile.classList.add("hidden");
+    logoutButton.classList.add("hidden");
     sidebar.classList.add("hidden");
     connectSocket();
 }
@@ -153,29 +153,62 @@ authForm.addEventListener("submit", async (event) => {
 authToggle.addEventListener("click", () => setAuthMode(!isSignup));
 guestButton.addEventListener("click", showGuestMode);
 
+togglePasswordButton.addEventListener("click", () => {
+    const showingPassword = passwordInput.type === "text";
+    passwordInput.type = showingPassword ? "password" : "text";
+    togglePasswordButton.textContent = showingPassword ? "◉" : "◌";
+    togglePasswordButton.setAttribute("aria-label", showingPassword ? "Show password" : "Hide password");
+    togglePasswordButton.title = showingPassword ? "Show password" : "Hide password";
+});
+
 async function loadConversations() {
     const response = await fetch(`${API_URL}/api/v1/conversations`, { credentials: "include" });
     if (!response.ok) throw new Error("Unable to load conversations");
     conversations = await response.json();
+    activeConversationId = null;
     renderConversations();
-    if (!activeConversationId && conversations.length) selectConversation(conversations[0].id);
-    if (!activeConversationId && !conversations.length) await createNewConversation();
+    const savedConversationId = localStorage.getItem(activeConversationStorageKey);
+    const conversationToRestore = keepConversationCheckbox.checked
+        ? conversations.find((conversation) => conversation.id === savedConversationId)
+        : null;
+    if (conversationToRestore) await selectConversation(conversationToRestore.id);
+    else await createNewConversation();
 }
 
 function renderConversations() {
     conversationList.replaceChildren();
     conversations.forEach((conversation) => {
-        const button = document.createElement("button");
-        button.className = `conversation-item${conversation.id === activeConversationId ? " active" : ""}`;
-        button.textContent = conversation.title;
-        button.title = conversation.title;
-        button.addEventListener("click", () => selectConversation(conversation.id));
-        conversationList.appendChild(button);
+        const item = document.createElement("div");
+        item.className = `conversation-item${conversation.id === activeConversationId ? " active" : ""}`;
+
+        const selectButton = document.createElement("button");
+        selectButton.className = "conversation-select";
+        selectButton.textContent = conversation.title;
+        selectButton.title = conversation.title;
+        selectButton.addEventListener("click", () => selectConversation(conversation.id));
+
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "delete-conversation";
+        deleteButton.type = "button";
+        deleteButton.textContent = "×";
+        deleteButton.title = `Delete ${conversation.title}`;
+        deleteButton.setAttribute("aria-label", `Delete ${conversation.title}`);
+        deleteButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            deleteConversation(conversation.id);
+        });
+
+        item.append(selectButton, deleteButton);
+        conversationList.appendChild(item);
     });
 }
 
 async function selectConversation(id) {
+    await discardEmptyActiveConversation(id);
     activeConversationId = id;
+    activeConversationHasMessages = false;
+    showToolCalls = false;
+    if (keepConversationCheckbox.checked) localStorage.setItem(activeConversationStorageKey, id);
     renderConversations();
     chat.replaceChildren();
     document.body.classList.remove("has-messages");
@@ -184,6 +217,7 @@ async function selectConversation(id) {
     const response = await fetch(`${API_URL}/api/v1/conversations/${id}/messages`, { credentials: "include" });
     if (!response.ok) return;
     const messages = await response.json();
+    activeConversationHasMessages = messages.length > 0;
     messages.forEach((message) => addMessage(message.content, message.role === "user" ? "user" : "agent", message.role === "assistant"));
 }
 
@@ -196,15 +230,85 @@ async function createNewConversation() {
     if (!response.ok) throw new Error("Unable to create conversation");
     const conversation = await response.json();
     conversations.unshift(conversation);
-    selectConversation(conversation.id);
+    await selectConversation(conversation.id);
     return conversation;
 }
 
-newConversationButton.addEventListener("click", createNewConversation);
+newConversationButton.addEventListener("click", () => {
+    if (sidebar.classList.contains("collapsed")) {
+        sidebar.classList.remove("collapsed");
+        collapseSidebarButton.textContent = "‹";
+        collapseSidebarButton.setAttribute("aria-label", "Collapse history");
+        collapseSidebarButton.title = "Collapse history";
+        return;
+    }
+    createNewConversation();
+});
+
+async function discardEmptyActiveConversation(nextConversationId = null) {
+    if (!isAuthenticated || !activeConversationId || activeConversationHasMessages || activeConversationId === nextConversationId) return;
+
+    const emptyConversationId = activeConversationId;
+    const response = await fetch(`${API_URL}/api/v1/conversations/${emptyConversationId}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    if (!response.ok) return;
+
+    conversations = conversations.filter((conversation) => conversation.id !== emptyConversationId);
+    if (localStorage.getItem(activeConversationStorageKey) === emptyConversationId) {
+        localStorage.removeItem(activeConversationStorageKey);
+    }
+    activeConversationId = null;
+    activeConversationHasMessages = false;
+    renderConversations();
+}
+
+async function deleteConversation(id) {
+    const conversation = conversations.find((item) => item.id === id);
+    if (!conversation || !window.confirm(`Delete “${conversation.title}”?`)) return;
+
+    const response = await fetch(`${API_URL}/api/v1/conversations/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+    });
+    if (!response.ok) return;
+
+    conversations = conversations.filter((item) => item.id !== id);
+    if (localStorage.getItem(activeConversationStorageKey) === id) localStorage.removeItem(activeConversationStorageKey);
+    if (activeConversationId === id) {
+        activeConversationId = null;
+        activeConversationHasMessages = false;
+        chat.replaceChildren();
+        document.body.classList.remove("has-messages");
+        if (conversations.length) await selectConversation(conversations[0].id);
+        else await createNewConversation();
+    } else {
+        renderConversations();
+    }
+}
+
+collapseSidebarButton.addEventListener("click", () => {
+    const collapsed = sidebar.classList.toggle("collapsed");
+    collapseSidebarButton.textContent = collapsed ? "›" : "‹";
+    collapseSidebarButton.setAttribute("aria-label", collapsed ? "Expand history" : "Collapse history");
+    collapseSidebarButton.title = collapsed ? "Expand history" : "Collapse history";
+});
+
+keepConversationCheckbox.checked = localStorage.getItem(keepConversationStorageKey) === "true";
+keepConversationCheckbox.addEventListener("change", () => {
+    localStorage.setItem(keepConversationStorageKey, keepConversationCheckbox.checked ? "true" : "false");
+    if (keepConversationCheckbox.checked && activeConversationId) {
+        localStorage.setItem(activeConversationStorageKey, activeConversationId);
+    } else if (!keepConversationCheckbox.checked) {
+        localStorage.removeItem(activeConversationStorageKey);
+    }
+});
 
 logoutButton.addEventListener("click", async () => {
     logoutButton.disabled = true;
     try {
+        await discardEmptyActiveConversation();
         await fetch(`${API_URL}/api/v1/auth/logout`, {
             method: "POST",
             credentials: "include",
@@ -263,12 +367,13 @@ function startToolRun() {
     const run = document.createElement("details");
     run.className = "tool-run";
     run.open = true;
-    run.innerHTML = `<summary>Tool calls <span class="tool-count">0</span></summary><div class="tool-log"><div class="tool-empty">Tool activity will appear here while Andromeda works.</div></div>`;
+    run.innerHTML = `<summary>Agent Actions<span class="tool-count">0</span></summary><div class="tool-log"><div class="tool-empty">Tool activity will appear here while Andromeda works.</div></div>`;
     chat.appendChild(run);
     activeToolRun = run;
 }
 
 function appendToolUpdate(update) {
+    if (!showToolCalls) return;
     if (!activeToolRun) startToolRun();
     const log = activeToolRun.querySelector(".tool-log");
     const count = activeToolRun.querySelector(".tool-count");
@@ -319,9 +424,30 @@ async function sendMessage() {
         }
     }
 
+    const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId);
+    if (isAuthenticated && activeConversation?.title === "New conversation") {
+        try {
+            const response = await fetch(`${API_URL}/api/v1/conversations/${activeConversationId}`, {
+                method: "PATCH",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: userInput }),
+            });
+            if (response.ok) {
+                const renamedConversation = await response.json();
+                activeConversation.title = renamedConversation.title;
+                renderConversations();
+            }
+        } catch {
+            // The message can still be sent if renaming is temporarily unavailable.
+        }
+    }
+
     addMessage(userInput, "user");
+    activeConversationHasMessages = true;
     input.value = "";
     sendButton.disabled = true;
+    showToolCalls = true;
     socket.send(JSON.stringify({
         type: "message",
         content: userInput,
