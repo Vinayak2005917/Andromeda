@@ -1,4 +1,4 @@
-const dev = "local";
+const dev = "render";
 
 let API_URL;
 let WS_URL;
