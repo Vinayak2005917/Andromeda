@@ -64,10 +64,7 @@ function stopResponseTimer() {
 const models = [
     { name: "openai/gpt-5-nano", label: "GPT-5 Nano", provider: "OpenAI", logo: "OpenAI.png" },
     { name: "deepseek/deepseek-v4-flash", label: "DeepSeek V4 Flash", provider: "DeepSeek", logo: "Deepseek.png" },
-    { name: "google/gemma-3-4b-it", label: "Gemma 3 4B IT", provider: "Google", logo: "gemma(google).png" },
-    { name: "google/gemma-3-12b-it", label: "Gemma 3 12B IT", provider: "Google", logo: "gemma(google).png" },
     { name: "openai/gpt-oss-120b", label: "GPT-OSS 120B", provider: "OpenAI", logo: "OpenAI.png" },
-    { name: "nvidia/nemotron-3-nano-30b-a3b", label: "Nemotron 3 Nano 30B A3B", provider: "NVIDIA", logo: "Nvidia.png" },
     { name: "qwen/qwen3.5-flash-02-23", label: "Qwen 3.5 Flash 02-23", provider: "Qwen", logo: "Qwen.png" },
     { name: "nvidia/nemotron-3-super-120b-a12b", label: "Nemotron 3 Super 120B A12B", provider: "NVIDIA", logo: "Nvidia.png" },
     { name: "google/gemma-4-26b-a4b-it", label: "Gemma 4 26b (experimental)", provider: "Google", logo: "gemma(google).png" },
@@ -308,16 +305,20 @@ function addMessage(content, type, markdown = false, animateAfterEmptyState = fa
 }
 
 function getHTMLFrameHeight(heightGuess) {
-    const numericHeight = typeof heightGuess === "number"
-        ? heightGuess
-        : typeof heightGuess === "string" && heightGuess.trim() !== ""
-            ? Number(heightGuess)
-            : NaN;
+    const numericHeight = Number(heightGuess);
 
-    if (!Number.isFinite(numericHeight)) return 720;
-    if (numericHeight < 900) return 600;
-    if (numericHeight <= 1800) return 720;
-    return 850;
+    // Fallback if the model sends something invalid
+    if (!Number.isFinite(numericHeight)) {
+        return 720;
+    }
+
+    const MIN_HEIGHT = 500;
+    const MAX_HEIGHT = 5000;
+
+    return Math.min(
+        Math.max(numericHeight, MIN_HEIGHT),
+        MAX_HEIGHT
+    );
 }
 
 function prepareHTMLDocument(htmlContent) {
