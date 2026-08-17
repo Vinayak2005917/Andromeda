@@ -97,7 +97,7 @@ body {
 .prompt-editor {
     position: fixed;
     inset: 0;
-    z-index: 10;
+    z-index: 100;
     display: grid;
     place-items: center;
     padding: 24px;
@@ -383,7 +383,7 @@ body {
     height: auto;
     transform: translate(-50%, -50%);
     opacity: 1;
-    z-index: 9999;
+    z-index: 99;
     pointer-events: none;
 }
 
@@ -476,8 +476,12 @@ body.has-messages #stars-bg {
     text-align: right;
 }
 
-.user {
+.message-row.user {
     align-self: flex-end;
+    background: #181818;
+}
+
+.message.user {
     background: #34343422;
     border-bottom-right-radius: 6px;
 }
@@ -687,7 +691,7 @@ body:not(.has-messages) #input-area {
     padding: 0 9px;
     border: 1px solid #3b3b3b;
     border-radius: 200px;
-    background: rgba(39, 39, 39, 0.94);
+    background: rgb(39, 39, 39);
     color: #262626;
     font: inherit;
     font-size: 12px;

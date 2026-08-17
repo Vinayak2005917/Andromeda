@@ -257,6 +257,12 @@ function finishToolRun() { activeToolRun = null; }
 
 function appendUserUpdate(update) {
     if (!userUpdateRunActive) return;
+    // Once research is complete, swap the loading label from
+    // "Researching..." to "Generating html".
+    if (update.Research_flag) {
+        const label = htmlLoadingMessage?.querySelector(".html-loading-message > span:first-child");
+        if (label) label.textContent = "Generating html";
+    }
     const message = addMessage(update.content || "", "agent");
     message.classList.add("transient-user-update");
     transientUserUpdates.push(message);

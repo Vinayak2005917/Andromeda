@@ -31,11 +31,11 @@ OpenAI_GPT5_Nano = ChatOpenAI(
 )
 
 
-@tool("update_user", description="Update the user about the progress you have made so far on the task you are working on.")
-def update_user(content: str):
-    debug_print(f"Sending update to user: {content}")
-    send_user_update(f"Update: {content}")
-    return f"Update sent to user: {content}"
+@tool("update_user", description="Update the user about the progress you have made so far on the task you are working on. the 2nd parameter is a boolean flag indicating whether the research is complete or not.")
+def update_user(content: str, research_flag: bool = False):
+    debug_print(f"Sending update to user: {content} with research_flag={research_flag}")
+    send_user_update(f"Update: {content}", research_flag)
+    return f"Update sent to user: {content} with research_flag={research_flag}"
 
 
 async def read_webpage(url: str, query: str):

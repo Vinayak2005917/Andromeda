@@ -69,13 +69,14 @@ def send_tool_update(contents: str):
     # Safely schedule the async WebSocket send
     asyncio.run_coroutine_threadsafe(manager.send(websocket, message), manager.loop)
 
-def send_user_update(contents: str):
+def send_user_update(contents: str, research_flag: bool = False):
     websocket = _active_connection.get()
     if manager.loop is None or websocket is None:
         return
     message = {
         "type": "user_update",
         "content": contents,
+        "Research_flag": research_flag
     }
     # Safely schedule the async WebSocket send
     asyncio.run_coroutine_threadsafe(manager.send(websocket, message), manager.loop)
