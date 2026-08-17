@@ -1,0 +1,108 @@
+@import url("https://fonts.googleapis.com/css2?family=Oxanium:wght@400;500;600;700&display=swap");
+
+:root {
+    color-scheme: dark;
+    font-family: "Oxanium", sans-serif;
+    background: #181818;
+    color: #f5f5f5;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; min-height: 100%; }
+
+.landing-page {
+    position: relative;
+    min-height: 100dvh;
+    overflow: hidden;
+    isolation: isolate;
+    padding: 24px;
+    background: #181818;
+    display: flex;
+    align-items: center;
+}
+
+.landing-page::before {
+    position: absolute;
+    inset: -24px;
+    z-index: -1;
+    content: "";
+    background: url("assets/auth_bg.jpg") center / cover no-repeat;
+    filter: blur(8px);
+    transform: scale(1.06);
+}
+
+.landing-page::after {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    content: "";
+    background: linear-gradient(90deg, rgba(24, 24, 24, .12), rgba(24, 24, 24, .2));
+}
+
+.github-link {
+    position: absolute;
+    top: 22px;
+    right: clamp(24px, 5vw, 72px);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: rgba(245, 245, 245, .72);
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: none;
+    transition: color 180ms ease, opacity 180ms ease;
+}
+
+.github-link img { width: 30px; height: 30px; object-fit: contain; }
+.github-link:hover { color: #fff; opacity: .9; }
+
+.landing-copy {
+    width: min(700px, 42vw);
+    margin-left: auto;
+    margin-right: clamp(40px, 10vw, 0px);
+}
+
+h1 {
+    margin: 0;
+    font-size: clamp(64px, 8vw, 108px);
+    font-weight: 700;
+    letter-spacing: .01em;
+}
+
+.landing-copy p {
+    max-width: 700px;
+    margin: 18px 0 0;
+    color: rgba(245, 245, 245, .9);
+    font-size: 18px;
+    line-height: 1.6;
+}
+
+.landing-copy .landing-tagline { font-size: 22px; }
+
+.start-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 160px;
+    height: 50px;
+    margin-top: 28px;
+    padding: 0 22px;
+    border-radius: 20px;
+    background: rgba(131, 131, 131, .42);
+    color: #f5f5f5;
+    font-size: 18px;
+    text-decoration: none;
+    transition: background 180ms ease, transform 180ms ease;
+}
+
+.start-button:hover { background: rgba(109, 112, 128, .7); transform: scale(1.02); }
+
+@media (max-width: 600px) {
+    .landing-page { align-items: center; padding: 80px 20px 48px; }
+    .landing-copy { width: 100%; margin: 0 auto; }
+    .github-link { right: 20px; }
+    .github-link span { display: none; }
+    .landing-copy p { font-size: 16px; }
+    .landing-copy .landing-tagline { font-size: 19px; }
+}

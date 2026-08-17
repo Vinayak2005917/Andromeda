@@ -7,8 +7,6 @@ from dotenv import load_dotenv
 from langchain.tools import tool
 from langchain_openai import ChatOpenAI
 
-from memory_store import append_memory, list_memory, read_memory
-from request_context import require_user_id
 from utils import debug_print
 from websocket import send_tool_update, send_user_update, send_HTML
 
@@ -25,60 +23,18 @@ if not api_key:
 if not os.getenv("SERP_API_KEY"):
     raise RuntimeError("SERP_API_KEY is not set")
 
+OpenAI_GPT5_Nano = ChatOpenAI(
+    model="openai/gpt-5-nano",
+    base_url="https://api.aicredits.in/v1",
+    api_key=api_key,
+)
+
 
 @tool("update_user", description="Update the user about the progress you have made so far on the task you are working on.")
 def update_user(content: str):
     debug_print(f"Sending update to user: {content}")
     send_user_update(f"Update: {content}")
     return f"Update sent to user: {content}"
-
-
-@tool("read_directory", description="Read the contents of all files in the user's private memory.")
-def read_directory(reason: str):
-    debug_print(f"Reading memory for reason: {reason}")
-    send_tool_update(f"Reading memory for reason: {reason}")
-    try:
-        result = list_memory(require_user_id())
-        send_tool_update("Done reading memory")
-        return result
-    except Exception as exc:
-        debug_print(f"Error reading memory: {exc}")
-        return str(exc)
-
-
-@tool("Read_file", description="Read one of the user's private memory files: user.md, notes.md, or logs.md.")
-def read_file(file_name: str):
-    debug_print(f"Reading file {file_name}")
-    send_tool_update(f"Reading file {file_name}")
-    try:
-        result = read_memory(require_user_id(), file_name)
-        debug_print(f"Done reading file {file_name}")
-        send_tool_update(f"Done reading file {file_name}")
-        return result
-    except Exception as exc:
-        debug_print(f"Error reading file {file_name}: {exc}")
-        return str(exc)
-
-
-@tool("write_to_file", description="Append content to one of the user's private memory files.")
-def write_to_file(file_name: str, content: str) -> str:
-    send_tool_update(f"Appending to {file_name}, content: {content[:50]}...")
-    debug_print(f"Appending to {file_name}, content: {content[:50]}...")
-    try:
-        result = append_memory(require_user_id(), file_name, content)
-        debug_print(f"Appended to file {file_name}")
-        send_tool_update(f"Appended to file {file_name}")
-        return result
-    except Exception as exc:
-        debug_print(f"Error writing file {file_name}: {exc}")
-        return str(exc)
-
-
-OpenAI_GPT5_Nano = ChatOpenAI(
-    model="openai/gpt-5-nano",
-    base_url="https://api.aicredits.in/v1",
-    api_key=api_key,
-)
 
 
 def summarize_for_query(query, webpage_text):

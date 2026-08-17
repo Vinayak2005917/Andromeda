@@ -4,98 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Andromeda</title>
-    <link rel="icon" type="image/png" href="Logo.png">
-
-    <!-- Markdown renderer -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="main.css">
+    <link rel="icon" type="image/png" href="assets/Logo.png">
+    <link rel="stylesheet" href="index.css">
 </head>
-
 <body>
-
-    <section id="auth-screen" class="auth-screen">
-        <a class="auth-github" href="https://github.com/Vinayak2005917/Andromeda" target="_blank" rel="noopener noreferrer">
-            <img src="GitHub_logo_White.png" alt="GitHub">
+    <main class="landing-page">
+        <a class="github-link" href="https://github.com/Vinayak2005917/Andromeda" target="_blank" rel="noopener noreferrer">
+            <img src="assets/GitHub_logo_White.png" alt="GitHub">
             <span>Vinayak2005917/Andromeda</span>
         </a>
-        <div class="auth-promo">
-            <h1>Andromeda</h1>
-            <p style="font-size: large;"><strong>Keep what matters in your orbit.</strong></p>
-            <p>Put something in your Orbit and Andromeda will keep track of it,
-                Watching for the moment it matters to you.
-                So you can focus on what matters to you in the moment.
+
+        <section class="landing-copy" aria-labelledby="landing-title">
+            <h1 id="landing-title">Andromeda</h1>
+            <p class="landing-tagline"><strong>Learn better through HTML</strong></p>
+            <p>
+                HTML is the most effective way to teach any topic — its structure,
+                semantics, and natural readability make learning intuitive and lasting.
             </p>
-            <button id="guest-button" class="quick-demo-button" type="button">Quick Demo?</button>
-        </div>
-        <div class="auth-card">
-            <p id="auth-subtitle">Sign in to continue.</p>
-            <form id="auth-form">
-                <label id="name-field" class="auth-field hidden">
-                    Name
-                    <input id="name-input" type="text" autocomplete="name" maxlength="100">
-                </label>
-                <label class="auth-field">
-                    Email
-                    <input id="email-input" type="email" autocomplete="email" required>
-                </label>
-                <label class="auth-field">
-                    Password
-                    <span class="password-field">
-                        <input id="password-input" type="password" autocomplete="current-password" minlength="8" required>
-                        <button id="toggle-password" class="toggle-password" type="button" aria-label="Show password" title="Show password">◉</button>
-                    </span>
-                </label>
-                <p id="auth-error" class="auth-error" role="alert"></p>
-                <div class="auth-actions">
-                    <button id="auth-submit" class="auth-action-button" type="submit">Continue!</button>
-                    <button id="auth-toggle" class="auth-action-button" type="button">I am new here</button>
-                </div>
-            </form>
-        </div>
-    </section>
-
-    <aside id="conversation-sidebar" class="conversation-sidebar hidden">
-        <div class="sidebar-heading">
-            <span>History</span>
-            <div class="sidebar-actions">
-                <button id="new-conversation" class="new-conversation" type="button" aria-label="New conversation" title="New conversation">
-                    <img src="Logo.png" alt="">
-                </button>
-                <button id="collapse-sidebar" class="collapse-sidebar" type="button" aria-label="Collapse history" title="Collapse history">‹</button>
-            </div>
-        </div>
-        <div id="conversation-list"></div>
-    </aside>
-
-    <button id="logout" class="logout-button hidden" type="button">Log out</button>
-
-    <div id="idle-state" aria-hidden="true">
-        <img src="Logo.png" alt="">
-        <span class="idle-title">What's our Next expedition?</span>
-        <div class="suggested-prompts" aria-label="Suggested prompts">
-            <button class="suggested-prompt" type="button" data-prompt="What mysteries are hiding in the universe?">What mysteries are hiding in the universe?</button>
-            <button class="suggested-prompt" type="button" data-prompt="How do I get started with Andromeda?">How do I get started with Andromeda?</button>
-            <button class="suggested-prompt" type="button" data-prompt="What are the latest discoveries in AI?">What are the latest discoveries in AI?</button>
-        </div>
-    </div>
-
-    <div id="chat"></div>
-
-    <div id="input-area">
-        <div id="input-shell">
-            <input
-                id="input"
-                type="text"
-                placeholder="Ask Andromeda anything..."
-                autocomplete="off"
-            />
-            <button id="send" class="send" aria-label="Send message" title="Send message">
-                    <img src="Send.png" alt="Send">
-            </button>
-        </div>
-        <span id="connection-indicator" class="connection-indicator" aria-label="Disconnected" title="Disconnected"></span>
-    </div>
-    <script type="module" src="main.js"></script>
-
+            <p>
+                With Andromeda, experience how HTML-powered lessons stick better,
+                so you can focus on mastering what truly matters.
+            </p>
+            <a class="start-button" href="main.html">Start exploring</a>
+        </section>
+    </main>
 </body>
 </html>

@@ -1,311 +1,158 @@
-const dev = "render";
+const BACKEND_TARGETS = [
+    { api: "https://andromeda-3fdr.onrender.com", ws: "wss://andromeda-3fdr.onrender.com/ws" },
+    { api: "http://127.0.0.1:8000", ws: "ws://127.0.0.1:8000/ws" },
+];
 
-let API_URL;
-let WS_URL;
+let backendTarget = BACKEND_TARGETS[0];
 
-if (dev === "local") {
-    API_URL = "http://127.0.0.1:8000";
-    WS_URL = "ws://127.0.0.1:8000/ws";
-}
-else if(dev === "render") {
-    API_URL = "https://andromeda-3fdr.onrender.com";
-    WS_URL = "wss://andromeda-3fdr.onrender.com/ws";
-}
-
-const authScreen = document.getElementById("auth-screen");
-const authForm = document.getElementById("auth-form");
-const authSubtitle = document.getElementById("auth-subtitle");
-const authSubmit = document.getElementById("auth-submit");
-const authToggle = document.getElementById("auth-toggle");
-const guestButton = document.getElementById("guest-button");
-const authError = document.getElementById("auth-error");
-const nameField = document.getElementById("name-field");
-const nameInput = document.getElementById("name-input");
-const emailInput = document.getElementById("email-input");
-const passwordInput = document.getElementById("password-input");
-const togglePasswordButton = document.getElementById("toggle-password");
-const logoutButton = document.getElementById("logout");
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
 const sendButton = document.getElementById("send");
 const connectionIndicator = document.getElementById("connection-indicator");
-const sidebar = document.getElementById("conversation-sidebar");
-const conversationList = document.getElementById("conversation-list");
-const newConversationButton = document.getElementById("new-conversation");
-const collapseSidebarButton = document.getElementById("collapse-sidebar");
 const suggestedPrompts = document.querySelectorAll(".suggested-prompt");
+const responseTimer = document.getElementById("response-timer");
+const editPromptButton = document.getElementById("edit-prompt");
+const promptEditor = document.getElementById("prompt-editor");
+const systemPromptInput = document.getElementById("system-prompt");
+const promptEditorStatus = document.getElementById("prompt-editor-status");
+const closePromptEditorButton = document.getElementById("close-prompt-editor");
+const cancelPromptButton = document.getElementById("cancel-prompt");
+const savePromptButton = document.getElementById("save-prompt");
+const modelPicker = document.getElementById("model-picker");
+const modelPickerButton = document.getElementById("model-picker-button");
+const modelPickerLabel = document.getElementById("model-picker-label");
+const modelProviderLogo = document.getElementById("model-provider-logo");
+const modelOptions = document.getElementById("model-options");
 
 let socket;
 let activeToolRun = null;
 let transientUserUpdates = [];
 let userUpdateRunActive = false;
-let isSignup = false;
-let isAuthenticated = false;
-let isGuest = false;
-let conversations = [];
-let activeConversationId = null;
-let activeConversationHasMessages = false;
 let showToolCalls = false;
 let isSubmittingMessage = false;
 let htmlResponseReceived = false;
 let htmlLoadingMessage = null;
-let guestThreadId = sessionStorage.getItem("andromeda_guest_thread") || `guest:${crypto.randomUUID()}`;
-sessionStorage.setItem("andromeda_guest_thread", guestThreadId);
+let threadId = null;
 let reconnectTimer;
+let selectedModel = "deepseek/deepseek-v4-flash";
+let systemPrompt = "";
+let promptEditorOriginal = "";
+let responseTimerStartedAt = 0;
+let responseTimerInterval = null;
 
-function setAuthMode(signup) {
-    isSignup = signup;
-    authSubtitle.textContent = signup ? "Get started with Andromeda." : "Sign in to continue.";
-    authSubmit.textContent = signup ? "Create account" : "Sign in";
-    authToggle.textContent = signup ? "Already have an account? Sign in" : "Create an account";
-    nameField.classList.toggle("hidden", !signup);
-    nameInput.required = signup;
-    passwordInput.autocomplete = signup ? "new-password" : "current-password";
-    authError.textContent = "";
+function updateResponseTimer() {
+    const elapsed = (performance.now() - responseTimerStartedAt) / 1000;
+    responseTimer.textContent = `${elapsed.toFixed(1)}s`;
 }
 
-function showAuthError(message) {
-    authError.textContent = message;
+function startResponseTimer() {
+    window.clearInterval(responseTimerInterval);
+    responseTimerStartedAt = performance.now();
+    responseTimer.hidden = false;
+    updateResponseTimer();
+    responseTimerInterval = window.setInterval(updateResponseTimer, 100);
 }
 
-function showAuthenticatedUser(user) {
-    isAuthenticated = true;
-    isGuest = false;
-    logoutButton.classList.remove("hidden");
-    authScreen.classList.add("hidden");
-    sidebar.classList.remove("hidden");
-    sidebar.classList.add("collapsed");
-    collapseSidebarButton.textContent = "›";
-    collapseSidebarButton.setAttribute("aria-label", "Expand history");
-    collapseSidebarButton.title = "Expand history";
-    sendButton.disabled = true;
-    connectSocket();
+function stopResponseTimer() {
+    if (!responseTimerStartedAt) return;
+    updateResponseTimer();
+    window.clearInterval(responseTimerInterval);
+    responseTimerInterval = null;
+    responseTimerStartedAt = 0;
 }
 
-function showAuthScreen() {
-    isAuthenticated = false;
-    isGuest = false;
-    userUpdateRunActive = false;
-    window.clearTimeout(reconnectTimer);
-    if (socket) socket.close();
-    logoutButton.classList.add("hidden");
-    sidebar.classList.add("hidden");
-    sidebar.classList.add("collapsed");
-    authScreen.classList.remove("hidden");
-    document.body.classList.remove("has-messages");
-    setAuthMode(false);
-    emailInput.focus();
-}
+const models = [
+    { name: "openai/gpt-5-nano", label: "GPT-5 Nano", provider: "OpenAI", logo: "OpenAI.png" },
+    { name: "deepseek/deepseek-v4-flash", label: "DeepSeek V4 Flash", provider: "DeepSeek", logo: "Deepseek.png" },
+    { name: "google/gemma-3-4b-it", label: "Gemma 3 4B IT", provider: "Google", logo: "gemma(google).png" },
+    { name: "google/gemma-3-12b-it", label: "Gemma 3 12B IT", provider: "Google", logo: "gemma(google).png" },
+    { name: "openai/gpt-oss-120b", label: "GPT-OSS 120B", provider: "OpenAI", logo: "OpenAI.png" },
+    { name: "nvidia/nemotron-3-nano-30b-a3b", label: "Nemotron 3 Nano 30B A3B", provider: "NVIDIA", logo: "Nvidia.png" },
+    { name: "qwen/qwen3.5-flash-02-23", label: "Qwen 3.5 Flash 02-23", provider: "Qwen", logo: "Qwen.png" },
+    { name: "nvidia/nemotron-3-super-120b-a12b", label: "Nemotron 3 Super 120B A12B", provider: "NVIDIA", logo: "Nvidia.png" },
+    { name: "google/gemma-4-26b-a4b-it", label: "Gemma 4 26b (experimental)", provider: "Google", logo: "gemma(google).png" },
+    { name: "inception/mercury-2", label: "Inception Mercury 2", provider: "Inception", logo: "inception.png" },
+];
 
-function showGuestMode() {
-    isAuthenticated = false;
-    isGuest = true;
-    authScreen.classList.add("hidden");
-    logoutButton.classList.add("hidden");
-    sidebar.classList.add("hidden");
-    connectSocket();
-}
-
-async function authRequest(path, body) {
-    const response = await fetch(`${API_URL}/api/v1/auth/${path}`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+function renderModelOptions() {
+    models.forEach((model) => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "model-option";
+        option.setAttribute("role", "option");
+        option.dataset.model = model.name;
+        option.innerHTML = `<img src="assets/${model.logo}" alt=""><span><strong>${model.label || model.name}</strong></span>`;
+        option.addEventListener("click", () => selectModel(model));
+        modelOptions.appendChild(option);
     });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.detail || "Authentication failed");
-    return data;
 }
 
-async function restoreSession() {
-    try {
-        let response = await fetch(`${API_URL}/api/v1/auth/me`, { credentials: "include" });
+function selectModel(model) {
+    selectedModel = model.name;
+    modelPickerLabel.textContent = model.label || model.name;
+    modelProviderLogo.src = `assets/${model.logo}`;
+    modelProviderLogo.alt = `${model.provider} logo`;
+    modelOptions.hidden = true;
+    modelPickerButton.setAttribute("aria-expanded", "false");
+}
 
-        if (response.status === 401) {
-            await fetch(`${API_URL}/api/v1/auth/refresh`, {
-                method: "POST",
-                credentials: "include",
-            });
-            response = await fetch(`${API_URL}/api/v1/auth/me`, { credentials: "include" });
-        }
+modelPickerButton.addEventListener("click", () => {
+    modelOptions.hidden = !modelOptions.hidden;
+    modelPickerButton.setAttribute("aria-expanded", String(!modelOptions.hidden));
+});
 
-        if (!response.ok) throw new Error("No active session");
-        showAuthenticatedUser(await response.json());
-        await loadConversations();
-    } catch {
-        showAuthScreen();
+document.addEventListener("click", (event) => {
+    if (!modelPicker.contains(event.target)) {
+        modelOptions.hidden = true;
+        modelPickerButton.setAttribute("aria-expanded", "false");
     }
+});
+
+renderModelOptions();
+
+async function loadSystemPrompt() {
+    const response = await fetch("prompt.md", { cache: "no-store" });
+    if (!response.ok) throw new Error("Unable to load the system prompt.");
+    systemPrompt = await response.text();
 }
 
-authForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    authSubmit.disabled = true;
-    showAuthError("");
+function closePromptEditor() {
+    promptEditor.hidden = true;
+    promptEditorStatus.textContent = "";
+}
 
+async function openPromptEditor() {
+    promptEditor.hidden = false;
+    promptEditorStatus.textContent = "Loading...";
     try {
-        const body = { email: emailInput.value.trim(), password: passwordInput.value };
-        if (isSignup) body.name = nameInput.value.trim();
-        const data = await authRequest(isSignup ? "signup" : "login", body);
-        authForm.reset();
-        showAuthenticatedUser(data.user);
-        await loadConversations();
+        if (!systemPrompt) await loadSystemPrompt();
+        promptEditorOriginal = systemPrompt;
+        systemPromptInput.value = systemPrompt;
+        promptEditorStatus.textContent = "";
+        systemPromptInput.focus();
     } catch (error) {
-        showAuthError(error.message);
-    } finally {
-        authSubmit.disabled = false;
+        promptEditorStatus.textContent = error.message;
     }
+}
+
+editPromptButton.addEventListener("click", openPromptEditor);
+closePromptEditorButton.addEventListener("click", closePromptEditor);
+cancelPromptButton.addEventListener("click", () => {
+    systemPrompt = promptEditorOriginal;
+    closePromptEditor();
 });
-
-authToggle.addEventListener("click", () => setAuthMode(!isSignup));
-guestButton.addEventListener("click", showGuestMode);
-
-togglePasswordButton.addEventListener("click", () => {
-    const showingPassword = passwordInput.type === "text";
-    passwordInput.type = showingPassword ? "password" : "text";
-    togglePasswordButton.textContent = showingPassword ? "◉" : "◌";
-    togglePasswordButton.setAttribute("aria-label", showingPassword ? "Show password" : "Hide password");
-    togglePasswordButton.title = showingPassword ? "Show password" : "Hide password";
-});
-
-async function loadConversations() {
-    const response = await fetch(`${API_URL}/api/v1/conversations`, { credentials: "include" });
-    if (!response.ok) throw new Error("Unable to load conversations");
-    conversations = await response.json();
-    activeConversationId = null;
-    renderConversations();
-    await createNewConversation();
-}
-
-function renderConversations() {
-    conversationList.replaceChildren();
-    conversations.forEach((conversation) => {
-        const item = document.createElement("div");
-        item.className = `conversation-item${conversation.id === activeConversationId ? " active" : ""}`;
-
-        const selectButton = document.createElement("button");
-        selectButton.className = "conversation-select";
-        selectButton.textContent = conversation.title;
-        selectButton.title = conversation.title;
-        selectButton.addEventListener("click", () => selectConversation(conversation.id));
-
-        const deleteButton = document.createElement("button");
-        deleteButton.className = "delete-conversation";
-        deleteButton.type = "button";
-        deleteButton.textContent = "×";
-        deleteButton.title = `Delete ${conversation.title}`;
-        deleteButton.setAttribute("aria-label", `Delete ${conversation.title}`);
-        deleteButton.addEventListener("click", (event) => {
-            event.stopPropagation();
-            deleteConversation(conversation.id);
-        });
-
-        item.append(selectButton, deleteButton);
-        conversationList.appendChild(item);
-    });
-}
-
-async function selectConversation(id) {
-    await discardEmptyActiveConversation(id);
-    activeConversationId = id;
-    activeConversationHasMessages = false;
-    showToolCalls = false;
-    renderConversations();
-    if (!isSubmittingMessage) chat.replaceChildren();
-    if (!isSubmittingMessage) document.body.classList.remove("has-messages");
-    finishToolRun();
-    userUpdateRunActive = false;
-    if (!isAuthenticated) return;
-    const response = await fetch(`${API_URL}/api/v1/conversations/${id}/messages`, { credentials: "include" });
-    if (!response.ok) return;
-    const messages = await response.json();
-    activeConversationHasMessages = messages.length > 0;
-    messages.forEach((message) => addMessage(message.content, message.role === "user" ? "user" : "agent", message.role === "assistant"));
-}
-
-async function createNewConversation() {
-    const response = await fetch(`${API_URL}/api/v1/conversations`, {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "New conversation" }),
-    });
-    if (!response.ok) throw new Error("Unable to create conversation");
-    const conversation = await response.json();
-    conversations.unshift(conversation);
-    await selectConversation(conversation.id);
-    return conversation;
-}
-
-newConversationButton.addEventListener("click", () => {
-    if (sidebar.classList.contains("collapsed")) {
-        sidebar.classList.remove("collapsed");
-        collapseSidebarButton.textContent = "‹";
-        collapseSidebarButton.setAttribute("aria-label", "Collapse history");
-        collapseSidebarButton.title = "Collapse history";
+savePromptButton.addEventListener("click", () => {
+    const prompt = systemPromptInput.value.trim();
+    if (!prompt) {
+        promptEditorStatus.textContent = "The system prompt cannot be empty.";
         return;
     }
-    createNewConversation();
+    systemPrompt = systemPromptInput.value;
+    closePromptEditor();
 });
 
-async function discardEmptyActiveConversation(nextConversationId = null) {
-    if (!isAuthenticated || !activeConversationId || activeConversationHasMessages || activeConversationId === nextConversationId) return;
-
-    const emptyConversationId = activeConversationId;
-    const response = await fetch(`${API_URL}/api/v1/conversations/${emptyConversationId}`, {
-        method: "DELETE",
-        credentials: "include",
-    });
-    if (!response.ok) return;
-
-    conversations = conversations.filter((conversation) => conversation.id !== emptyConversationId);
-    activeConversationId = null;
-    activeConversationHasMessages = false;
-    renderConversations();
-}
-
-async function deleteConversation(id) {
-    const conversation = conversations.find((item) => item.id === id);
-    if (!conversation || !window.confirm(`Delete “${conversation.title}”?`)) return;
-
-    const response = await fetch(`${API_URL}/api/v1/conversations/${id}`, {
-        method: "DELETE",
-        credentials: "include",
-    });
-    if (!response.ok) return;
-
-    conversations = conversations.filter((item) => item.id !== id);
-    if (activeConversationId === id) {
-        activeConversationId = null;
-        activeConversationHasMessages = false;
-        chat.replaceChildren();
-        document.body.classList.remove("has-messages");
-        if (conversations.length) await selectConversation(conversations[0].id);
-        else await createNewConversation();
-    } else {
-        renderConversations();
-    }
-}
-
-collapseSidebarButton.addEventListener("click", () => {
-    const collapsed = sidebar.classList.toggle("collapsed");
-    collapseSidebarButton.textContent = collapsed ? "›" : "‹";
-    collapseSidebarButton.setAttribute("aria-label", collapsed ? "Expand history" : "Collapse history");
-    collapseSidebarButton.title = collapsed ? "Expand history" : "Collapse history";
-});
-
-logoutButton.addEventListener("click", async () => {
-    logoutButton.disabled = true;
-    try {
-        await discardEmptyActiveConversation();
-        await fetch(`${API_URL}/api/v1/auth/logout`, {
-            method: "POST",
-            credentials: "include",
-        });
-    } finally {
-        logoutButton.disabled = false;
-        showAuthScreen();
-    }
+promptEditor.addEventListener("click", (event) => {
+    if (event.target === promptEditor) closePromptEditor();
 });
 
 function setConnectionState(connected) {
@@ -315,8 +162,8 @@ function setConnectionState(connected) {
 }
 
 function connectSocket() {
-    if (socket && socket.readyState <= WebSocket.OPEN) return;
-    socket = new WebSocket(WS_URL);
+    if (!threadId || (socket && socket.readyState <= WebSocket.OPEN)) return;
+    socket = new WebSocket(`${backendTarget.ws}/${threadId}`);
 
     socket.addEventListener("open", () => {
         setConnectionState(true);
@@ -327,8 +174,10 @@ function connectSocket() {
     socket.addEventListener("close", (event) => {
         setConnectionState(false);
         sendButton.disabled = true;
-        if (event.code === 1008 || (!isAuthenticated && !isGuest)) {
-            showAuthScreen();
+        stopResponseTimer();
+        if (backendTarget === BACKEND_TARGETS[0]) {
+            backendTarget = BACKEND_TARGETS[1];
+            startAnonymousSession();
             return;
         }
         reconnectTimer = window.setTimeout(connectSocket, 1500);
@@ -343,6 +192,7 @@ function connectSocket() {
         if (data.type === "html_response") {
             console.log("[HTML response] received height_guess:", data.height_guess);
             removeHTMLLoadingMessage();
+            stopResponseTimer();
             userUpdateRunActive = false;
             htmlResponseReceived = true;
             addHTMLMessage(data.content, data.height_guess);
@@ -353,6 +203,7 @@ function connectSocket() {
         }
         if (data.type === "response") {
             removeHTMLLoadingMessage();
+            stopResponseTimer();
             userUpdateRunActive = false;
             // send_html_response returns a short acknowledgement after it has
             // already delivered the actual HTML over the WebSocket.
@@ -366,6 +217,7 @@ function connectSocket() {
         }
         if (data.type === "error") {
             removeHTMLLoadingMessage();
+            stopResponseTimer();
             userUpdateRunActive = false;
             addMessage(data.content, "agent");
             sendButton.disabled = false;
@@ -377,8 +229,9 @@ function startToolRun() {
     const run = document.createElement("details");
     run.className = "tool-run";
     run.open = true;
-    run.innerHTML = `<summary>Agent Actions<span class="tool-count">0</span></summary><div class="tool-log"><div class="tool-empty">Tool activity will appear here while Andromeda works.</div></div>`;
+    run.innerHTML = `<summary>Agent Actions Log:  <span class="tool-count">0</span></summary><div class="tool-log"><div class="tool-empty">Tool activity will appear here while Andromeda works.</div></div>`;
     chat.appendChild(run);
+    chat.scrollTop = chat.scrollHeight;
     activeToolRun = run;
 }
 
@@ -400,6 +253,7 @@ function appendToolUpdate(update) {
     log.appendChild(entry);
     count.textContent = log.children.length;
     log.scrollTop = log.scrollHeight;
+    chat.scrollTop = chat.scrollHeight;
 }
 
 function finishToolRun() { activeToolRun = null; }
@@ -422,7 +276,7 @@ function showHTMLLoadingMessage() {
     htmlLoadingMessage = document.createElement("div");
     htmlLoadingMessage.className = "message agent html-loading-message";
     htmlLoadingMessage.innerHTML = `
-        <span>Generating HTML</span>
+        <span>Researching...</span>
         <span class="loading-dots" aria-label="Loading">
             <span></span><span></span><span></span>
         </span>
@@ -543,12 +397,14 @@ async function sendMessage() {
     const userInput = input.value.trim();
     if (!userInput || !socket || socket.readyState !== WebSocket.OPEN) return;
 
-    // Start the empty-state animation before any conversation setup requests.
+    startResponseTimer();
+    // Start the empty-state animation before sending the first message.
     const isFirstMessage = !document.body.classList.contains("has-messages");
     isSubmittingMessage = true;
     document.body.classList.add("has-messages");
-    addMessage(userInput, "user", false, isFirstMessage);
-    activeConversationHasMessages = true;
+    const userMessage = addMessage(userInput, "user", false, isFirstMessage);
+    userMessage.appendChild(responseTimer);
+    if (isFirstMessage) editPromptButton.hidden = true;
     input.value = "";
     sendButton.disabled = true;
     showToolCalls = true;
@@ -556,44 +412,12 @@ async function sendMessage() {
     userUpdateRunActive = true;
     showHTMLLoadingMessage();
 
-    if (isAuthenticated && !activeConversationId) {
-        try {
-            await createNewConversation();
-        } catch (error) {
-            isSubmittingMessage = false;
-            userUpdateRunActive = false;
-            removeHTMLLoadingMessage();
-            sendButton.disabled = false;
-            addMessage(error.message || "Unable to start a conversation.", "agent");
-            return;
-        }
-    }
-
-    const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId);
-    if (isAuthenticated && activeConversation?.title === "New conversation") {
-        try {
-            const response = await fetch(`${API_URL}/api/v1/conversations/${activeConversationId}`, {
-                method: "PATCH",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title: userInput }),
-            });
-            if (response.ok) {
-                const renamedConversation = await response.json();
-                activeConversation.title = renamedConversation.title;
-                renderConversations();
-            }
-        } catch {
-            // The message can still be sent if renaming is temporarily unavailable.
-        }
-    }
-
     isSubmittingMessage = false;
     socket.send(JSON.stringify({
         type: "message",
         content: userInput,
-        conversation_id: activeConversationId,
-        guest_thread_id: guestThreadId,
+        model_name: selectedModel,
+        ...(isFirstMessage ? { system_prompt: systemPrompt } : {}),
     }));
 }
 
@@ -612,5 +436,26 @@ input.addEventListener("keydown", (event) => {
     }
 });
 
-setAuthMode(false);
-restoreSession();
+async function startAnonymousSession() {
+    if (!systemPrompt) await loadSystemPrompt();
+    for (const target of BACKEND_TARGETS) {
+        try {
+            const response = await fetch(`${target.api}/generate_thread_id`, {
+                cache: "no-store",
+            });
+            if (!response.ok) continue;
+            backendTarget = target;
+            ({ thread_id: threadId } = await response.json());
+            connectSocket();
+            return;
+        } catch {
+            // Try the local backend when the deployed backend is unavailable.
+        }
+    }
+    throw new Error("Unable to connect to Andromeda. Start the backend on port 8000.");
+}
+
+startAnonymousSession().catch((error) => {
+    addMessage(error.message, "agent");
+    setConnectionState(false);
+});
