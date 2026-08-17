@@ -20,7 +20,7 @@ if not api_key:
 memory = InMemorySaver()
 
 
-def ask_agent(thread_id: str, user_input: str, model_name: str = "deepseek/deepseek-v4-flash", prompt_soul: str | None = None) -> str:
+async def ask_agent(thread_id: str, user_input: str, model_name: str = "deepseek/deepseek-v4-flash", prompt_soul: str | None = None) -> str:
 
     system_prompt = f'{prompt_soul}\n\nDate and time right now: {datetime.now().strftime("%H:%M:%S on %Y-%m-%d")}'
 
@@ -39,15 +39,20 @@ def ask_agent(thread_id: str, user_input: str, model_name: str = "deepseek/deeps
 
     debug_print(f"Main agent using model {model_name} invoked for query '{user_input}' on thread {thread_id}")
     debug_print(f"and system prompt: {system_prompt[:20]}...")
-    response = main_agent.invoke(
+    response = await main_agent.ainvoke(
         {"messages": [{"role": "user", "content": user_input}]},
         config={"configurable": {"thread_id": thread_id}},
     )
     return response["messages"][-1].content
 
 if __name__ == "__main__":
-    while True:
-        user_input = input("User: ")
-        thread_id = input("Thread ID: ")
-        response = ask_agent(thread_id, user_input)
-        print(f"Andromeda: {response}")
+    import asyncio
+
+    async def main():
+        while True:
+            user_input = input("User: ")
+            thread_id = input("Thread ID: ")
+            response = await ask_agent(thread_id, user_input)
+            print(f"Andromeda: {response}")
+
+    asyncio.run(main())

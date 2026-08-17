@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 
 from fastapi import FastAPI, Response, WebSocket, WebSocketDisconnect
@@ -28,8 +27,7 @@ async def websocket_endpoint(websocket: WebSocket, thread_id: str):
             message = await websocket.receive_json()
             if message.get("type") != "message":
                 continue
-            response = await asyncio.to_thread(
-                ask_agent,
+            response = await ask_agent(
                 thread_id,
                 message.get("content", ""),
                 message.get("model_name", "deepseek/deepseek-v4-flash"),
