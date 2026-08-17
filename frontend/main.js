@@ -270,15 +270,22 @@ function clearUserUpdates() {
 function showHTMLLoadingMessage() {
     removeHTMLLoadingMessage();
 
-    htmlLoadingMessage = document.createElement("div");
-    htmlLoadingMessage.className = "message agent html-loading-message";
-    htmlLoadingMessage.innerHTML = `
+    const row = document.createElement("div");
+    row.className = "message-row agent loading-row";
+    row.appendChild(createAvatar("agent"));
+
+    const loading = document.createElement("div");
+    loading.className = "message agent html-loading-message";
+    loading.innerHTML = `
         <span>Researching...</span>
         <span class="loading-dots" aria-label="Loading">
             <span></span><span></span><span></span>
         </span>
     `;
-    chat.appendChild(htmlLoadingMessage);
+
+    row.appendChild(loading);
+    chat.appendChild(row);
+    htmlLoadingMessage = row;
     chat.scrollTop = chat.scrollHeight;
 }
 
@@ -287,8 +294,23 @@ function removeHTMLLoadingMessage() {
     htmlLoadingMessage = null;
 }
 
+function getCurrentModel() {
+    return models.find((model) => model.name === selectedModel) || models[0];
+}
+
+function createAvatar(type) {
+    const avatar = document.createElement("img");
+    avatar.className = `avatar ${type}-avatar`;
+    avatar.src = type === "user" ? "assets/user.png" : `assets/${getCurrentModel().logo}`;
+    avatar.alt = "";
+    return avatar;
+}
+
 function addMessage(content, type, markdown = false, animateAfterEmptyState = false) {
     document.body.classList.add("has-messages");
+    const row = document.createElement("div");
+    row.className = `message-row ${type}`;
+    const avatar = createAvatar(type);
     const message = document.createElement("div");
     message.classList.add("message", type);
     if (animateAfterEmptyState) message.classList.add("user-message-entering");
@@ -299,7 +321,8 @@ function addMessage(content, type, markdown = false, animateAfterEmptyState = fa
     timestamp.dateTime = new Date().toISOString();
     timestamp.textContent = new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" }).format(new Date());
     message.appendChild(timestamp);
-    chat.appendChild(message);
+    row.append(avatar, message);
+    chat.appendChild(row);
     chat.scrollTop = chat.scrollHeight;
     return message;
 }
@@ -356,6 +379,10 @@ function prepareHTMLDocument(htmlContent) {
 function addHTMLMessage(htmlContent, heightGuess) {
     document.body.classList.add("has-messages");
 
+    const row = document.createElement("div");
+    row.className = "message-row agent html-row";
+    row.appendChild(createAvatar("agent"));
+
     const message = document.createElement("div");
     message.classList.add("message", "agent", "html-message");
 
@@ -383,7 +410,8 @@ function addHTMLMessage(htmlContent, heightGuess) {
 
     message.append(frame, timestamp);
 
-    chat.appendChild(message);
+    row.appendChild(message);
+    chat.appendChild(row);
     chat.scrollTop = chat.scrollHeight;
 
     return message;

@@ -373,6 +373,20 @@ body {
     mask-image: none;
 }
 
+/* Sitter: half-overlaps the idle title on the left.
+   Tweak --sitter-x / --sitter-y to fine-tune position (percentages). */
+#idle-state #sitter {
+    position: absolute;
+    left: var(--sitter-x, 65.5%);
+    top: var(--sitter-y, 42.5%);
+    width: min(100px, 15vw);
+    height: auto;
+    transform: translate(-50%, -50%);
+    opacity: 1;
+    z-index: 9999;
+    pointer-events: none;
+}
+
 /* Let the empty-state controls receive clicks through the blank chat layer. */
 body:not(.has-messages) #chat {
     pointer-events: none;
@@ -422,6 +436,24 @@ body.has-messages #stars-bg {
     display: none;
 }
 
+/* Subtle drift for scattered stars */
+@keyframes star-drift {
+    from { transform: translate(0, 0) rotate(var(--r)); }
+    to   { transform: translate(var(--dx), var(--dy)) rotate(var(--r)); }
+}
+
+/* Twinkle (opacity + scale pulse) for single stars */
+@keyframes twinkle {
+    0%, 100% { opacity: .12; transform: translate(0, 0) rotate(var(--r)) scale(1); }
+    50%      { opacity: .7;  transform: translate(0, 0) rotate(var(--r)) scale(1.3); }
+}
+
+/* Gentle drift for the corner floater */
+@keyframes floater {
+    from { transform: translate(-50%, -50%) translate(0, 0) rotate(-4deg); }
+    to   { transform: translate(-50%, -50%) translate(var(--fdx), var(--fdy)) rotate(4deg); }
+}
+
 .message {
     max-width: min(75%, 760px);
     padding: 13px 17px;
@@ -455,6 +487,54 @@ body.has-messages #stars-bg {
     align-self: flex-start;
     background: #181818;
     border-bottom-left-radius: 6px;
+}
+
+/* Message rows with avatars */
+.message-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    max-width: min(85%, 800px);
+}
+
+.message-row .message {
+    max-width: 100%;
+}
+
+.message-row.agent {
+    align-self: flex-start;
+}
+
+.message-row.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.message-row .avatar {
+    flex: 0 0 auto;
+    width: 45px;
+    margin-top: 2px;
+    border-radius: 50%;
+    background: #181818;
+    object-fit: contain;
+}
+
+.message-row .user-avatar {
+    padding: 0;
+    object-fit: cover;
+}
+
+/* Full-width HTML responses: avatar on top */
+.message-row.html-row {
+    align-self: center;
+    width: min(100%, 900px);
+    max-width: 100%;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.message-row.html-row .avatar {
+    margin-top: 0;
 }
 
 .html-loading-message {
@@ -538,7 +618,7 @@ body.has-messages #stars-bg {
     display: flex;
     align-items: center;
     gap: 10px;
-    transition: bottom 360ms cubic-bezier(.22, .8, .25, 1);
+    transition: bottom 1000ms cubic-bezier(.22, .8, .25, 1);
     will-change: bottom;
 }
 

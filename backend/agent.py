@@ -7,7 +7,7 @@ from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import InMemorySaver
 
-from tools import Get_relevant_webpages, read_webpage, update_user, search_images, send_html_response
+from tools import Get_relevant_webpages, batch_read_pages, update_user, search_images, send_html_response
 
 from utils import debug_print
 
@@ -32,7 +32,7 @@ def ask_agent(thread_id: str, user_input: str, model_name: str = "deepseek/deeps
         
     main_agent = create_agent(
         model=current_model,
-        tools=[read_webpage, Get_relevant_webpages, update_user, search_images, send_html_response],
+        tools=[batch_read_pages, Get_relevant_webpages, update_user, search_images, send_html_response],
         system_prompt=system_prompt,
         checkpointer=memory,
     )
