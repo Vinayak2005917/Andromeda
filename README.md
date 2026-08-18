@@ -15,24 +15,11 @@ Prompt : ```Teach me about Orbital mechanics Visually!!```
 
 Model : ```DeepSeek V4 Flash 0731```
 
-<div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-
-  <div style="display:flex; justify-content:center; gap:10px;">
-    <img src="frontend/assets/Example_output_1.png"
-         style="width:200px; height:200px; object-fit:contain;">
-
-    <img src="frontend/assets/Example_output_2.png"
-         style="width:200px; height:200px; object-fit:contain;">
-  </div>
-
-  <div style="display:flex; justify-content:center; gap:10px;">
-    <img src="frontend/assets/Example_output_3.png"
-         style="width:200px; height:200px; object-fit:contain;">
-
-    <img src="frontend/assets/Example_output_4.png"
-         style="width:200px; height:200px; object-fit:contain;">
-  </div>
-
+<div align="center">
+  <img src="frontend/assets/Example_output_1.png" width="200" height="200" />
+  <img src="frontend/assets/Example_output_2.png" width="200" height="200" />
+  <img src="frontend/assets/Example_output_3.png" width="200" height="200" />
+  <img src="frontend/assets/Example_output_4.png" width="200" height="200" />
 </div>
 
 Compared to using a normal LLM that outputs a wall of text with a million bullet points, Andromeda can output a beautiful and interactive Web page that can be used to teach the user about Orbital mechanics visually.
