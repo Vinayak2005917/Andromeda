@@ -10,12 +10,12 @@ Andromeda
 </div>
 
 
-* A LMM's output does not need to a wall of text with a million bullet points. Markdown is a great way to format text, but it also has limits against the sheer amount of text some of these LLM's use to answer questions. 
+* A LMM's output does not need to be a wall of text with millions of bullet points. Markdown is a great way to format text, but it also has limits against the sheer amount of text LLM's use to answer questions. 
 
-* They also have an unprecidented ability to Code beautiful and interactive Web pages.
+* The goal of this project was to use the unprecedented coding ability of modern LLM's to enhance the user experience for the normal user. 
 
 
-**So Andromeda is a Agent that can use the LLM's ability to code beautiful and interactive Web pages to answer questions in a more Visual and interactive way.**
+**So Andromeda is a Agent that can use the LLM's ability to code beautiful and interactive Web pages to answer questions in a Very Visual and interactive way.Using the power of HTML, CSS and JS**
 
 The following are some screenshots of the output from Andromeda:
 
@@ -27,7 +27,7 @@ Model : ```DeepSeek V4 Flash 0731```
   <img src="frontend/assets/Example_output_1.png" width="800">
 </div>
 
-Compared to using a normal LLM that outputs a wall of text with a million bullet points, Andromeda can output a beautiful and interactive Web page that can be used to teach the user about Orbital mechanics visually.
+As you can see Compared to using Markdown, the output is much more visual and interactive. The user can interact with the output to understand the topic better and in a more intuitive way.
 
 # Tool and Features
 
@@ -69,6 +69,6 @@ Compared to using a normal LLM that outputs a wall of text with a million bullet
 
 <div align="center">
     <a href="https://andromeda-teal.vercel.app/index.html">
-        <img src="frontend/assets/Landing_Page.png" width="600">
+        <img src="frontend/assets/landing_Page.png" width="600">
     </a>
 </div>
