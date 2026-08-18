@@ -10,6 +10,9 @@ const input = document.getElementById("input");
 const sendButton = document.getElementById("send");
 const connectionIndicator = document.getElementById("connection-indicator");
 const suggestedPrompts = document.querySelectorAll(".suggested-prompt");
+const suggestedPromptsContainer = document.querySelector(".suggested-prompts");
+const timeSelector = document.getElementById("time-selector");
+const timeButtons = document.querySelectorAll(".time-button");
 const responseTimer = document.getElementById("response-timer");
 const editPromptButton = document.getElementById("edit-prompt");
 const promptEditor = document.getElementById("prompt-editor");
@@ -35,14 +38,22 @@ let htmlLoadingMessage = null;
 let threadId = null;
 let reconnectTimer;
 let selectedModel = "deepseek/deepseek-v4-flash";
+let selectedTimeLimit = "3 mins";
 let systemPrompt = "";
 let promptEditorOriginal = "";
 let responseTimerStartedAt = 0;
 let responseTimerInterval = null;
 
+function formatElapsedTime(elapsedSeconds) {
+    if (elapsedSeconds < 60) return `${elapsedSeconds.toFixed(1)}s`;
+    const minutes = Math.floor(elapsedSeconds / 60);
+    const seconds = Math.floor(elapsedSeconds % 60);
+    return `${minutes}m ${seconds}s`;
+}
+
 function updateResponseTimer() {
     const elapsed = (performance.now() - responseTimerStartedAt) / 1000;
-    responseTimer.textContent = `${elapsed.toFixed(1)}s`;
+    responseTimer.textContent = formatElapsedTime(elapsed);
 }
 
 function startResponseTimer() {
@@ -106,6 +117,13 @@ document.addEventListener("click", (event) => {
 });
 
 renderModelOptions();
+
+// Extra instruction line appended to the user prompt based on the selected time limit.
+const TIME_LIMITS = {
+    ASAP: "first figure out if the user want to have a normal conversation. # if not then No web calls unless or until absolutely needed, just an update and then Make a Good looking short demo with 2D and 3D visuals and sliders buttons.",
+    "3 mins": "first figure out if the user want to have a normal conversation. # if not then DO NOT USE THE WEB PAGE READER MORE THAN ONCE, DO NOT USE THE IMAGE SEARCH, Make it Good looking  2D and 3D visuals and sliders buttons. Following the HTML desing guide in the system prompt.",
+    "5 mins": "first figure out if the user want to have a normal conversation. # if not then 2 WEB PAGE READS AND ONE IMAGE SEARCH, Make it Good looking with 2D and 3D visuals and sliders buttons. Following the HTML desing guide in the system prompt.",
+};
 
 async function loadSystemPrompt() {
     const response = await fetch("prompt.md", { cache: "no-store" });
@@ -448,11 +466,12 @@ async function sendMessage() {
     showHTMLLoadingMessage();
 
     isSubmittingMessage = false;
+    const instructionLine = TIME_LIMITS[selectedTimeLimit];
     socket.send(JSON.stringify({
         type: "message",
-        content: userInput,
+        content: instructionLine ? `${userInput}\n${instructionLine}` : userInput,
         model_name: selectedModel,
-        ...(isFirstMessage ? { system_prompt: systemPrompt } : {}),
+        system_prompt: systemPrompt,
     }));
 }
 
@@ -461,6 +480,29 @@ suggestedPrompts.forEach((promptButton) => {
     promptButton.addEventListener("click", () => {
         input.value = promptButton.dataset.prompt || "";
         input.focus();
+        // Filling the input via JS does not fire the "input" event, so sync the UI manually.
+        updatePromptState();
+    });
+});
+
+// While typing, completely hide the suggested prompts and show the time-limit selector instead.
+function updatePromptState() {
+    const isTyping = input.value.trim().length > 0;
+    suggestedPromptsContainer.hidden = isTyping;
+    timeSelector.hidden = !isTyping;
+}
+
+input.addEventListener("input", updatePromptState);
+
+// Time-limit selection (ASAP by default).
+timeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        selectedTimeLimit = button.dataset.time;
+        timeButtons.forEach((timeButton) => {
+            const isSelected = timeButton === button;
+            timeButton.classList.toggle("is-selected", isSelected);
+            timeButton.setAttribute("aria-pressed", String(isSelected));
+        });
     });
 });
 
