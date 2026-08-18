@@ -69,6 +69,6 @@ As you can see Compared to using Markdown, the output is much more visual and in
 
 <div align="center">
     <a href="https://andromeda-teal.vercel.app/index.html">
-        <img src="frontend/assets/landing_Page.png" width="600">
+        <img src="frontend/assets/landing_page.png" width="600">
     </a>
 </div>
