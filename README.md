@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="frontend\assets\logo.png"height="40" style="vertical-align: middle;">
+  <img src="frontend\assets\Logo.png"height="40" style="vertical-align: middle;">
 Andromeda
 </h1>
 
@@ -9,3 +9,22 @@ Modern day LLM models have an unprecidented ability to Code beautiful and intera
 
 So Andromeda is a Agent that can use the LLM's ability to code beautiful and interactive Web pages to answer questions in a more Visual and interactive way.
 
+The following are some outputs from Andromeda:
+
+Prompt : ```Teach me about Orbital mechanics Visually!!```
+
+Model : ```DeepSeek V4 Flash 0731```
+
+<div style="display:flex; justify-content:center; gap:10px;">
+  <img src="frontend\assets\Example_output_1.png" height="190">
+  <img src="frontend\assets\Example_output_2.png" height="190">
+</div>
+<p></p>
+<div style="display:flex; justify-content:center; gap:10px;">
+  <img src="frontend\assets\Example_output_3.png" height="190">
+  <img src="frontend\assets\Example_output_4.png" height="200">
+</div>
+
+Compared to using a normal LLM that outputs a wall of text with a million bullet points, Andromeda can output a beautiful and interactive Web page that can be used to teach the user about Orbital mechanics visually.
+
+# Tool and Features
